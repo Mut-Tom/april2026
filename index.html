@@ -3,381 +3,828 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CoC Battle — ロスター登録</title>
-<link rel="stylesheet" href="css/style.css">
+<title>CoC Battle Tournament — 闘技場</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&family=Noto+Serif+JP:wght@300;400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-.layout { display: grid; grid-template-columns: 1fr 340px; gap: 0; }
-@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
-
-.main-col  { border-right: 1px solid var(--border); }
-.aside-col { background: var(--bg2); }
-
-.roster-list { display: flex; flex-direction: column; gap: 7px; }
-.roster-empty {
-  color: var(--text3); font-style: italic; font-size: 13px;
-  text-align: center; padding: 32px;
-  border: 1px dashed var(--border);
+:root{
+  --bg:#090806;--bg1:#0f0d0a;--bg2:#161210;--bg3:#1e1814;
+  --border:#382e20;--border2:#5a4a2e;--border3:#8a7040;
+  --gold:#c8a84a;--gold2:#e8cc70;--gold3:#fff5b0;
+  --blood:#7a1818;--blood2:#b02828;--blood3:#dc4848;
+  --teal2:#286858;--teal3:#48b098;
+  --san:#4a2870;--san2:#7848a8;--san3:#b080e0;
+  --text:#d8c89a;--text2:#a08858;--text3:#6a5838;--text4:#342a18;
+  --green:#285018;--green2:#488830;--green3:#78c050;
 }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP','IM Fell English',serif;min-height:100vh;line-height:1.6}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 100% 50% at 50% -10%,rgba(122,24,24,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 10% 60%,rgba(74,40,112,.04) 0%,transparent 50%)}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.2;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E")}
+#app{position:relative;z-index:1}
+.page{display:none}.page.active{display:block}
 
-.config-block {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
-.config-block:last-child { border-bottom: none; }
+/* HEADER */
+.page-header{text-align:center;padding:36px 0 28px;position:relative}
+.page-header::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:280px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.eyebrow{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:7px;color:var(--text3);text-transform:uppercase;margin-bottom:10px}
+.page-title{font-family:'Cinzel Decorative',serif;font-size:clamp(22px,5vw,40px);color:var(--gold2);text-shadow:0 0 60px rgba(200,168,74,.3),0 2px 8px rgba(0,0,0,.9);letter-spacing:3px}
+.page-sub{margin-top:8px;font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--text3);letter-spacing:2px}
 
-.radio-opt {
-  display: flex; align-items: flex-start; gap: 8px;
-  cursor: pointer;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  margin-bottom: 6px;
-  transition: all .2s;
-}
-.radio-opt:last-child { margin-bottom: 0; }
-.radio-opt:hover { border-color: var(--border2); background: var(--bg3); }
-.radio-opt.selected { border-color: var(--gold); background: var(--bg3); }
-.radio-opt input { accent-color: var(--gold); margin-top: 2px; flex-shrink:0; }
-.radio-opt-content { }
-.radio-opt-label { font-size: 12px; color: var(--text2); }
-.radio-opt-sub   { font-size: 10px; color: var(--text3); margin-top: 1px; }
-.radio-opt.selected .radio-opt-label { color: var(--gold2); }
+/* STEP NAV */
+.step-nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--border)}
+.snav{flex:1;padding:13px 8px;text-align:center;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);border-right:1px solid var(--border);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;user-select:none}
+.snav:last-child{border-right:none}
+.snav .sn{font-family:'Cinzel Decorative',serif;font-size:15px;color:inherit}
+.snav.active{color:var(--gold2);background:var(--bg3)}
+.snav.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.snav.done{color:var(--green3)}
+.snav.disabled{opacity:.3;pointer-events:none}
+.snav:not(.disabled):hover{color:var(--text);background:var(--bg3)}
 
-.url-row { display: flex; gap: 6px; margin-bottom: 8px; }
-.url-row .input { font-size: 11px; }
+/* LAYOUT */
+.two-col{display:grid;grid-template-columns:1fr 320px}
+.btl-layout{display:grid;grid-template-columns:1fr 290px}
+@media(max-width:800px){.two-col,.btl-layout{display:block}.sidebar{display:none}}
+.main-col{border-right:1px solid var(--border)}
+.aside-col,.sidebar{background:var(--bg2)}
 
-.count-indicator {
-  text-align: center; font-size: 11px;
-  color: var(--text3); margin-bottom: 10px;
-  font-family: 'Share Tech Mono', monospace;
-}
-.count-num { color: var(--gold); font-size: 16px; font-weight: 700; }
+/* SECTION */
+.sec{padding:24px 20px;background:var(--bg1)}
+.sec+.sec{border-top:1px solid var(--border)}
+.sec-title{font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:4px;color:var(--gold);padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'◆';font-size:8px}
 
-.debug-info {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  padding: 10px 12px;
-  margin-top: 12px;
-  font-size: 10px;
-  color: var(--text3);
-  font-family: 'Share Tech Mono', monospace;
-  max-height: 120px;
-  overflow-y: auto;
-  display: none;
-}
-.debug-info.visible { display: block; }
+/* INPUT */
+.inp{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 13px;font-size:12px;font-family:'Share Tech Mono',monospace;outline:none;transition:border-color .2s;width:100%}
+.inp:focus{border-color:var(--gold)}
+.inp::placeholder{color:var(--text4);font-size:11px}
+
+/* BUTTONS */
+.btn{border:1px solid var(--border2);background:var(--bg3);color:var(--gold);padding:9px 18px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover:not(:disabled){background:var(--border);color:var(--gold2);border-color:var(--border3)}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn-p{background:linear-gradient(135deg,var(--blood) 0%,#3a0a0a 100%);border-color:var(--blood2);color:var(--gold2);padding:12px 28px;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:3px;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%)}
+.btn-p:hover:not(:disabled){background:linear-gradient(135deg,var(--blood2),var(--blood));box-shadow:0 0 28px rgba(176,40,40,.35);transform:translateY(-1px)}
+.btn-blk{width:100%;justify-content:center}
+
+/* RADIO */
+.ropt{display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:8px 10px;border:1px solid var(--border);margin-bottom:6px;transition:all .2s}
+.ropt:last-child{margin-bottom:0}
+.ropt:hover{border-color:var(--border2);background:var(--bg3)}
+.ropt.sel{border-color:var(--gold);background:var(--bg3)}
+.ropt input{accent-color:var(--gold);margin-top:2px;flex-shrink:0}
+.ro-l{font-size:12px;color:var(--text2)}
+.ro-s{font-size:10px;color:var(--text3);margin-top:1px}
+.ropt.sel .ro-l{color:var(--gold2)}
+
+/* ROSTER */
+.roster-list{display:flex;flex-direction:column;gap:7px}
+.r-empty{color:var(--text3);font-style:italic;font-size:13px;text-align:center;padding:32px;border:1px dashed var(--border)}
+.r-item{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);padding:10px 14px;transition:border-color .2s;animation:sIn .25s ease}
+@keyframes sIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.r-item:hover{border-color:var(--border2)}
+.r-item.ok{border-left:3px solid var(--green2)}
+.r-item.err{border-left:3px solid var(--blood2)}
+.r-item.loading{opacity:.6}
+.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sdot.ok{background:var(--green2)}.sdot.err{background:var(--blood2)}.sdot.loading{background:var(--gold);animation:pu .8s infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.2}}
+.ri{flex:1;min-width:0}
+.ri-n{font-size:14px;font-weight:700;color:var(--gold2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-m{font-size:11px;color:var(--text3);margin-top:1px}
+.ri-s{font-size:11px;color:var(--text2);font-family:'Share Tech Mono',monospace;margin-top:2px}
+.btn-del{background:none;border:none;color:var(--text4);cursor:pointer;font-size:16px;padding:4px 6px;flex-shrink:0;transition:color .2s}
+.btn-del:hover{color:var(--blood2)}
+
+/* BARS */
+.bar-track{height:8px;background:var(--bg3);border:1px solid var(--border);overflow:hidden}
+.bar-fill{height:100%;transition:width .5s ease}
+.bar-fill.hp-l{background:var(--blood2);box-shadow:0 0 6px rgba(176,40,40,.4)}
+.bar-fill.hp-r{background:var(--teal2);box-shadow:0 0 6px rgba(40,104,88,.4)}
+.bar-fill.mp{background:#3878aa}
+.bar-fill.san{background:var(--san)}
+
+/* HP DASH */
+.hp-dash{background:var(--bg2);border:1px solid var(--border);padding:14px 18px 12px;margin-bottom:14px}
+.hp-row{display:grid;grid-template-columns:1fr 44px 1fr;gap:10px;align-items:center}
+.fn{font-size:14px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn.l{color:var(--blood3)}.fn.r{color:var(--teal3);text-align:right}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.bar-lbl{font-size:9px;letter-spacing:1px;color:var(--text3);width:28px;font-family:'Share Tech Mono',monospace}
+.bar-val{font-size:10px;color:var(--text2);font-family:'Share Tech Mono',monospace;white-space:nowrap;width:50px;text-align:right}
+.hp-vs{font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--gold);text-align:center;text-shadow:0 0 20px rgba(200,168,74,.4)}
+
+/* ROUND */
+.round-badge{text-align:center;margin-bottom:14px}
+.round-pill{display:inline-block;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:5px;color:var(--gold);border:1px solid var(--border2);padding:4px 28px;background:var(--bg3)}
+
+/* LOG */
+.battle-log{background:var(--bg1);border:1px solid var(--border);height:400px;overflow-y:auto;font-size:13px;line-height:1.7;scroll-behavior:smooth}
+.battle-log::-webkit-scrollbar{width:5px}
+.battle-log::-webkit-scrollbar-track{background:var(--bg1)}
+.battle-log::-webkit-scrollbar-thumb{background:var(--border2)}
+.log-line{padding:7px 14px;border-bottom:1px solid rgba(56,46,32,.5);animation:lf .2s ease}
+@keyframes lf{from{opacity:0;background:rgba(200,168,74,.04)}to{opacity:1;background:none}}
+.log-round{font-family:'Cinzel Decorative',serif;font-size:10px;letter-spacing:5px;color:var(--gold);text-align:center;background:var(--bg3);padding:7px;border-bottom:1px solid var(--border)}
+.log-attack-l{border-left:3px solid var(--blood2)}
+.log-attack-r{border-left:3px solid var(--teal2)}
+.log-san{border-left:3px solid var(--san2);background:rgba(74,40,112,.04)}
+.log-result{border-left:3px solid var(--gold);background:linear-gradient(90deg,rgba(200,168,74,.06),transparent);font-weight:700;font-size:14px}
+.log-sys{color:var(--text3);font-style:italic;font-size:11px}
+.cn-l{font-weight:700;color:var(--blood3)}.cn-r{font-weight:700;color:var(--teal3)}
+.t-hit{color:var(--gold2)}.t-miss{color:var(--text3);font-style:italic}
+.t-dmg{color:var(--blood3);font-family:'Share Tech Mono',monospace;font-weight:700}
+.t-crit{color:var(--gold3);font-weight:700}.t-evade{color:var(--teal3)}
+.t-san{color:var(--san3)}.t-roll{color:var(--text3);font-size:11px;font-family:'Share Tech Mono',monospace}
+
+/* BATTLE CONTROLS */
+.btl-ctrl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.btn-btl{background:linear-gradient(135deg,var(--blood) 0%,#3a0a0a 100%);border:1px solid var(--blood2);color:var(--gold2);padding:11px 26px;cursor:pointer;font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:3px;transition:all .3s;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)}
+.btn-btl:hover:not(:disabled){background:linear-gradient(135deg,var(--blood2),var(--blood));box-shadow:0 0 24px rgba(176,40,40,.4);transform:translateY(-1px)}
+.btn-btl:disabled{opacity:.3;cursor:not-allowed}
+.btn-btl.running{background:linear-gradient(135deg,var(--green),#0e2408);border-color:var(--green2);color:var(--green3);clip-path:none}
+.btn-spd{background:var(--bg2);border:1px solid var(--border);color:var(--text3);padding:7px 10px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;transition:all .2s}
+.btn-spd:hover{border-color:var(--border2);color:var(--text)}
+.btn-spd.active{border-color:var(--gold);color:var(--gold);background:var(--bg3)}
+
+/* SIDEBAR */
+.sidebar-inner{padding:14px}
+.sc{background:var(--bg2);border:1px solid var(--border);padding:14px;margin-bottom:14px}
+.sc-title{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);font-family:'Share Tech Mono',monospace}
+.cnt-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cnt-box{background:var(--bg3);border:1px solid var(--border);padding:8px;text-align:center}
+.cnt-v{font-size:22px;font-weight:700;font-family:'Share Tech Mono',monospace;color:var(--gold2)}
+.cnt-l{font-size:8px;color:var(--text3);letter-spacing:2px;margin-top:1px}
+.char-mini{border:1px solid var(--border);padding:10px;margin-bottom:8px}
+.char-mini:last-child{margin-bottom:0}
+.cm-name{font-size:12px;font-weight:700;margin-bottom:6px}
+.cm-name.l{color:var(--blood3)}.cm-name.r{color:var(--teal3)}
+.mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:6px}
+.mini-stat{background:var(--bg3);border:1px solid var(--border);padding:3px;text-align:center}
+.ms-l{font-size:8px;color:var(--text3)}.ms-v{font-size:13px;font-weight:700;font-family:'Share Tech Mono',monospace}
+.mini-weps{font-size:10px}
+.mini-wep{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border);color:var(--text2)}
+.mini-wep:last-child{border-bottom:none}
+.mw-dmg{color:var(--gold);font-family:'Share Tech Mono',monospace}
+
+/* PROGRESS */
+.pi{font-size:11px;padding:5px 8px;border:1px solid var(--border);background:var(--bg3);display:flex;gap:6px;align-items:center;margin-bottom:4px}
+.pi.current{border-color:var(--gold)}.pi.done{opacity:.5}.pi.bye{opacity:.4;font-style:italic}
+.pi-num{color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:9px;width:16px}
+.pi-nl{color:var(--blood3)}.pi-nr{color:var(--teal3)}.pi-vs{color:var(--text4)}
+.pi-win{color:var(--green3);font-size:10px;margin-left:auto;font-family:'Share Tech Mono',monospace}
+.mqt{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;border:1px solid;padding:1px 5px}
+.mqt.cur{color:var(--gold);border-color:var(--gold)}.mqt.win{color:var(--green3);border-color:var(--green2)}
+.mqt.bye{color:var(--text3);border-color:var(--border)}.mqt.wait{color:var(--text4);border-color:var(--border)}
+
+/* OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.overlay.show{display:flex}
+.ov-box{background:var(--bg2);border:1px solid var(--border3);padding:40px 48px;text-align:center;max-width:500px;width:90%;position:relative;box-shadow:0 0 80px rgba(200,168,74,.12)}
+.ov-box::before,.ov-box::after{content:'✦';position:absolute;color:var(--gold);font-size:18px}
+.ov-box::before{top:12px;left:16px}.ov-box::after{bottom:12px;right:16px}
+.ov-lbl{font-size:9px;letter-spacing:6px;color:var(--text3);text-transform:uppercase;font-family:'Share Tech Mono',monospace;margin-bottom:14px}
+.ov-ttl{font-family:'Cinzel Decorative',serif;font-size:clamp(22px,5vw,36px);color:var(--gold2);text-shadow:0 0 40px rgba(200,168,74,.4);margin-bottom:8px}
+.ov-name{font-size:20px;color:var(--text);margin-bottom:4px}
+.ov-sub{font-size:12px;color:var(--text3);font-style:italic;margin-bottom:20px}
+.ov-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.ov-stat{background:var(--bg3);border:1px solid var(--border);padding:8px}
+.ov-sv{font-size:20px;font-weight:700;font-family:'Share Tech Mono',monospace;color:var(--gold2)}
+.ov-sl{font-size:8px;color:var(--text3);letter-spacing:2px;margin-top:2px}
+.ov-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* BRACKET */
+.match-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:24px}
+.match-card{background:var(--bg2);border:1px solid var(--border);padding:12px 14px}
+.mc-title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:10px}
+.match-fighters{display:flex;align-items:center;gap:8px}
+.mf{flex:1;background:var(--bg3);border:1px solid var(--border);padding:8px 10px}
+.mf-n{font-size:13px;font-weight:700}.mf-m{font-size:10px;color:var(--text3);margin-top:2px;font-family:'Share Tech Mono',monospace}
+.ms{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);flex-shrink:0}
+.picker-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:12px;align-items:start;margin-bottom:24px}
+.pct{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-family:'Share Tech Mono',monospace}
+.p-vs{display:flex;align-items:center;justify-content:center;padding-top:36px;font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--gold);text-shadow:0 0 20px rgba(200,168,74,.4)}
+.t-hdr{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);padding:12px 18px;margin-bottom:20px}
+.t-badge{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;border:1px solid var(--border2);padding:3px 10px;color:var(--gold);background:var(--bg3)}
+
+/* CHAMPION */
+.champ-banner{display:none;background:linear-gradient(135deg,var(--bg3),var(--bg2));border:2px solid var(--gold);padding:28px;text-align:center;box-shadow:0 0 50px rgba(200,168,74,.1)}
+.champ-banner.show{display:block}
+.cb-trophy{font-size:44px;margin-bottom:8px}
+.cb-lbl{font-size:9px;letter-spacing:5px;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px}
+.cb-name{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,4vw,28px);color:var(--gold2);text-shadow:0 0 30px rgba(200,168,74,.5);margin-bottom:4px}
+
+/* DEBUG */
+.dbg{background:var(--bg3);border:1px solid var(--border);padding:10px 12px;margin-top:12px;font-size:10px;color:var(--text3);font-family:'Share Tech Mono',monospace;max-height:110px;overflow-y:auto;display:none;white-space:pre-wrap}
+.dbg.on{display:block}
+
+/* MISC */
+.cfg-block{padding:18px 20px;border-bottom:1px solid var(--border)}
+.cfg-block:last-child{border-bottom:none}
+.cfg-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:block;font-family:'Share Tech Mono',monospace}
+.cnt-ind{text-align:center;font-size:11px;color:var(--text3);margin-bottom:10px;font-family:'Share Tech Mono',monospace}
+.cnt-num{color:var(--gold);font-size:16px;font-weight:700}
+.url-row{display:flex;gap:6px;margin-bottom:8px}
 </style>
 </head>
 <body>
 <div id="app">
 
-<div class="page-header" style="padding-bottom:32px">
+<div class="page-header">
   <div class="eyebrow">Cthulhu Mythos TRPG — Battle Simulator</div>
   <h1 class="page-title">闘技場</h1>
   <p class="page-sub">The Arena of Fallen Investigators</p>
 </div>
 
 <nav class="step-nav">
-  <a class="step-nav-item active" href="index.html">
-    <span class="step-num">I</span>ROSTER
-  </a>
-  <a class="step-nav-item disabled" href="bracket.html" id="navBracket">
-    <span class="step-num">II</span>BRACKET
-  </a>
-  <a class="step-nav-item disabled" href="battle.html" id="navBattle">
-    <span class="step-num">III</span>BATTLE
-  </a>
+  <div class="snav active" id="nav0" onclick="showPage(0)"><span class="sn">I</span>ROSTER</div>
+  <div class="snav disabled" id="nav1" onclick="showPage(1)"><span class="sn">II</span>BRACKET</div>
+  <div class="snav disabled" id="nav2" onclick="showPage(2)"><span class="sn">III</span>BATTLE</div>
 </nav>
 
-<div class="layout">
-  <!-- ── メインカラム ── -->
-  <div class="main-col">
-    <div class="section">
-      <div class="section-title">キャラクターシートを登録</div>
-
-      <div class="url-row">
-        <input class="input" id="urlInput" type="text"
-          placeholder="https://charasheet.vampire-blood.net/xxxxx  または  ID"
-          onkeydown="if(event.key==='Enter') addFromInput()">
-        <button class="btn" onclick="addFromInput()" style="white-space:nowrap">＋ 追加</button>
+<!-- PAGE 0: ROSTER -->
+<div class="page active" id="page0">
+  <div class="two-col">
+    <div class="main-col">
+      <div class="sec">
+        <div class="sec-title">キャラクターシートを登録</div>
+        <div class="url-row">
+          <input class="inp" id="urlInput" type="text"
+            placeholder="https://charasheet.vampire-blood.net/xxxxx  または ID"
+            onkeydown="if(event.key==='Enter')addFromInput()">
+          <button class="btn" onclick="addFromInput()" style="white-space:nowrap">＋ 追加</button>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:4px;font-style:italic">※ 複数URLはスペース・改行区切りで一括登録可能</p>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:16px">
+          サンプル: <a href="#" onclick="loadSample();return false" style="color:var(--gold);text-decoration:none">ダリア・ハミルトンを読み込む →</a>
+        </p>
+        <div class="roster-list" id="rosterList">
+          <div class="r-empty">まだキャラクターが登録されていません</div>
+        </div>
+        <div class="dbg" id="dbgBox"></div>
       </div>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:4px;font-style:italic">
-        ※ 複数URLはスペースまたは改行区切りでまとめて貼り付け可能
-      </p>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;font-style:italic">
-        ※ サンプル: <a href="#" onclick="loadSample();return false" style="color:var(--gold);text-decoration:none">ダリア・ハミルトンを読み込む</a>
-      </p>
-
-      <div class="roster-list" id="rosterList">
-        <div class="roster-empty" id="rosterEmpty">まだキャラクターが登録されていません</div>
+    </div>
+    <div class="aside-col">
+      <div class="cfg-block">
+        <div class="sec-title" style="margin-bottom:14px">設定</div>
+        <div class="cnt-ind">登録済み: <span class="cnt-num" id="cntNum">0</span> 名</div>
+        <span class="cfg-lbl">戦闘モード</span>
+        <div id="modeGrp">
+          <label class="ropt sel"><input type="radio" name="mode" value="tournament" checked onchange="syncR('modeGrp')"><div><div class="ro-l">🏆 トーナメント</div><div class="ro-s">ランダムで組み合わせ・シングルエリミネーション</div></div></label>
+          <label class="ropt"><input type="radio" name="mode" value="1v1" onchange="syncR('modeGrp')"><div><div class="ro-l">⚔ 1 vs 1</div><div class="ro-s">対戦相手を手動で選ぶ</div></div></label>
+        </div>
       </div>
-
-      <div class="debug-info" id="debugInfo"></div>
+      <div class="cfg-block">
+        <span class="cfg-lbl">戦闘速度</span>
+        <div id="spdGrp">
+          <label class="ropt"><input type="radio" name="speed" value="30" onchange="syncR('spdGrp')"><div><div class="ro-l">⚡ 超高速 (30ms)</div></div></label>
+          <label class="ropt sel"><input type="radio" name="speed" value="150" checked onchange="syncR('spdGrp')"><div><div class="ro-l">▶ 高速 (150ms)</div></div></label>
+          <label class="ropt"><input type="radio" name="speed" value="500" onchange="syncR('spdGrp')"><div><div class="ro-l">◎ 普通 (500ms)</div></div></label>
+          <label class="ropt"><input type="radio" name="speed" value="1200" onchange="syncR('spdGrp')"><div><div class="ro-l">🐢 ゆっくり (1.2秒)</div></div></label>
+        </div>
+      </div>
+      <div class="cfg-block">
+        <button class="btn btn-p btn-blk" id="proceedBtn" disabled onclick="goToBracket()">次のステップへ →</button>
+        <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px" id="proceedNote">2名以上登録すると進めます</p>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- ── サイドバー ── -->
-  <div class="aside-col">
-    <div class="config-block">
-      <div class="section-title" style="margin-bottom:14px">戦闘設定</div>
+<!-- PAGE 1: BRACKET -->
+<div class="page" id="page1">
+  <div class="sec">
+    <div id="bracketContent"></div>
+    <div style="text-align:center;margin-top:8px">
+      <button class="btn btn-p" id="startBtn" onclick="goToBattle()">⚔ 戦闘開始</button>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px" id="startNote"></p>
+    </div>
+  </div>
+</div>
 
-      <div class="count-indicator">
-        登録済み: <span class="count-num" id="countNum">0</span> 名
+<!-- PAGE 2: BATTLE -->
+<div class="page" id="page2">
+  <div class="btl-layout">
+    <div class="main-col">
+      <div class="sec">
+        <div class="round-badge"><div class="round-pill" id="roundPill">ROUND 1</div></div>
+        <div class="hp-dash">
+          <div class="hp-row">
+            <div id="hpL"></div>
+            <div class="hp-vs">⚔</div>
+            <div id="hpR" style="text-align:right"></div>
+          </div>
+        </div>
+        <div class="battle-log" id="battleLog"></div>
+        <div class="btl-ctrl">
+          <button class="btn-btl" id="battleBtn" onclick="toggleBattle()" disabled>▶ 戦闘実行</button>
+          <span style="font-size:10px;color:var(--text3)">速度:</span>
+          <button class="btn-spd active" id="spd1" onclick="setSpd(30,this)">⚡超高速</button>
+          <button class="btn-spd" id="spd2" onclick="setSpd(150,this)">▶高速</button>
+          <button class="btn-spd" id="spd3" onclick="setSpd(500,this)">◎普通</button>
+          <button class="btn-spd" id="spd4" onclick="setSpd(1200,this)">🐢ゆっくり</button>
+        </div>
       </div>
-
-      <div style="margin-bottom:16px">
-        <div style="font-size:10px;letter-spacing:3px;color:var(--text3);margin-bottom:8px;font-family:'Share Tech Mono',monospace">
-          戦闘モード
-        </div>
-        <div id="modeGroup">
-          <label class="radio-opt selected">
-            <input type="radio" name="mode" value="tournament" checked onchange="onModeChange(this)">
-            <div class="radio-opt-content">
-              <div class="radio-opt-label">🏆 トーナメント</div>
-              <div class="radio-opt-sub">ランダムで対戦表を作成・シングルエリミネーション</div>
-            </div>
-          </label>
-          <label class="radio-opt">
-            <input type="radio" name="mode" value="1v1" onchange="onModeChange(this)">
-            <div class="radio-opt-content">
-              <div class="radio-opt-label">⚔ 1 vs 1</div>
-              <div class="radio-opt-sub">対戦相手を手動で選んで1試合のみ</div>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <div style="margin-bottom:16px">
-        <div style="font-size:10px;letter-spacing:3px;color:var(--text3);margin-bottom:8px;font-family:'Share Tech Mono',monospace">
-          戦闘速度
-        </div>
-        <div id="speedGroup">
-          <label class="radio-opt">
-            <input type="radio" name="speed" value="30" onchange="onRadioChange('speedGroup')">
-            <div class="radio-opt-content">
-              <div class="radio-opt-label">⚡ 超高速 (30ms)</div>
-            </div>
-          </label>
-          <label class="radio-opt selected">
-            <input type="radio" name="speed" value="150" checked onchange="onRadioChange('speedGroup')">
-            <div class="radio-opt-content">
-              <div class="radio-opt-label">▶ 高速 (150ms)</div>
-            </div>
-          </label>
-          <label class="radio-opt">
-            <input type="radio" name="speed" value="500" onchange="onRadioChange('speedGroup')">
-            <div class="radio-opt-content">
-              <div class="radio-opt-label">◎ 普通 (500ms)</div>
-            </div>
-          </label>
-          <label class="radio-opt">
-            <input type="radio" name="speed" value="1200" onchange="onRadioChange('speedGroup')">
-            <div class="radio-opt-content">
-              <div class="radio-opt-label">🐢 ゆっくり (1.2秒)</div>
-            </div>
-          </label>
-        </div>
+      <div class="champ-banner" id="champBanner">
+        <div class="cb-trophy">🏆</div>
+        <div class="cb-lbl">Tournament Champion</div>
+        <div class="cb-name" id="cbName">—</div>
+        <div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:4px">最後の探索者 — 勝利</div>
+        <div style="margin-top:20px"><button class="btn" onclick="resetAll()">最初からやり直す</button></div>
       </div>
     </div>
-
-    <div class="config-block">
-      <button class="btn btn-primary btn-block" id="proceedBtn" disabled onclick="proceed()">
-        次のステップへ →
-      </button>
-      <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px" id="proceedNote">
-        2名以上登録すると進めます
-      </p>
+    <div class="sidebar">
+      <div class="sidebar-inner">
+        <div class="sc"><div class="sc-title">Fighter Stats</div><div id="charMini"></div></div>
+        <div class="sc">
+          <div class="sc-title">Battle Record</div>
+          <div class="cnt-grid">
+            <div class="cnt-box"><div class="cnt-v" id="cR">1</div><div class="cnt-l">ROUND</div></div>
+            <div class="cnt-box"><div class="cnt-v" id="cA">0</div><div class="cnt-l">ATTACKS</div></div>
+            <div class="cnt-box"><div class="cnt-v" id="cD">0</div><div class="cnt-l">DAMAGE</div></div>
+            <div class="cnt-box"><div class="cnt-v" id="cS">0</div><div class="cnt-l">SAN LOST</div></div>
+          </div>
+        </div>
+        <div class="sc" id="progCard" style="display:none">
+          <div class="sc-title">Tournament Progress</div>
+          <div id="progList"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 </div><!-- /app -->
 
-<script src="js/state.js"></script>
-<script src="js/loader.js"></script>
+<div class="overlay" id="resultOv">
+  <div class="ov-box">
+    <div class="ov-lbl">Match Result</div>
+    <div class="ov-ttl" id="ovTtl">決着！</div>
+    <div class="ov-name" id="ovName"></div>
+    <div class="ov-sub"  id="ovSub"></div>
+    <div class="ov-stats" id="ovStats"></div>
+    <div class="ov-btns"  id="ovBtns"></div>
+  </div>
+</div>
+
 <script>
+'use strict';
 
-// ── Init ───────────────────────────────────────────
-const S = State.get();
-renderAll();
+// ── STATE ─────────────────────────────────────────
+const App={roster:[],mode:'tournament',speed:150,matches:[],matchIdx:0};
+const B={L:null,R:null,round:1,turn:0,initTurn:0,running:false,over:false,timer:null,stats:{attacks:0,dmg:0,sanLost:0}};
 
-function loadSample() {
-  document.getElementById('urlInput').value =
-    'https://charasheet.vampire-blood.net/mfc2905efc5208939fc66d6c41a5eb5fb';
+// ── PAGE NAV ──────────────────────────────────────
+function showPage(n){
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===n));
+  document.querySelectorAll('.snav').forEach((el,i)=>el.classList.toggle('active',i===n));
+}
+
+function goToBracket(){
+  App.mode =document.querySelector('input[name="mode"]:checked')?.value||'tournament';
+  App.speed=parseInt(document.querySelector('input[name="speed"]:checked')?.value||'150');
+  setSpdUI(App.speed);
+  if(App.mode==='tournament') buildTournamentUI();
+  else                        buildPickerUI();
+  document.getElementById('nav1').classList.remove('disabled');
+  showPage(1);
+}
+
+function goToBattle(){
+  if(App.mode==='1v1'){
+    const li=document.querySelector('input[name="pickL"]:checked');
+    const ri=document.querySelector('input[name="pickR"]:checked');
+    if(!li||!ri){alert('両サイドを選択してください');return;}
+    if(li.value===ri.value){alert('同じキャラクターは選べません');return;}
+    const chars=App.roster.filter(c=>c._s==='ok');
+    App.matches=[{id:0,l:cp(chars[+li.value]),r:cp(chars[+ri.value]),winner:null,loser:null,isBye:false,round:1}];
+    App.matchIdx=0;
+  }
+  document.getElementById('nav2').classList.remove('disabled');
+  document.getElementById('progCard').style.display=App.mode==='tournament'?'':'none';
+  showPage(2);
+  loadMatch();
+}
+
+function resetAll(){
+  App.roster=[];App.matches=[];App.matchIdx=0;
+  document.getElementById('rosterList').innerHTML='<div class="r-empty">まだキャラクターが登録されていません</div>';
+  document.getElementById('cntNum').textContent='0';
+  ['nav1','nav2'].forEach(id=>document.getElementById(id).classList.add('disabled'));
+  document.getElementById('proceedBtn').disabled=true;
+  document.getElementById('champBanner').classList.remove('show');
+  document.getElementById('resultOv').classList.remove('show');
+  showPage(0);
+}
+
+// ── UTILS ─────────────────────────────────────────
+const d=n=>Math.floor(Math.random()*n)+1;
+const d100=()=>d(100);
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const cp=o=>JSON.parse(JSON.stringify(o));
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rollDmg(s){
+  if(!s)return{t:1,e:'1'};
+  s=String(s).toUpperCase().replace(/\s/g,'');
+  let t=0;
+  for(const p of s.split(/(?=[+\-])/g).filter(Boolean)){
+    const md=p.match(/^([+\-]?)(\d+)[D](\d+)$/);
+    const mc=p.match(/^([+\-]?\d+)$/);
+    if(md){const sign=md[1]==='-'?-1:1;for(let i=0;i<+md[2];i++)t+=sign*d(+md[3]);}
+    else if(mc)t+=parseInt(mc[1]);
+  }
+  return{t,e:s};
+}
+function calcDB(str,siz){
+  const n=str+siz;
+  if(n<=12)return{l:'-1d4',r:()=>-d(4)};
+  if(n<=16)return{l:'0',   r:()=>0};
+  if(n<=24)return{l:'+1d4',r:()=>+d(4)};
+  if(n<=32)return{l:'+1d6',r:()=>+d(6)};
+  return    {l:'+2d6',r:()=>d(6)+d(6)};
+}
+
+// ── LOADER ────────────────────────────────────────
+function extractId(input){
+  input=input.trim();
+  const m=input.match(/charasheet\.vampire-blood\.net\/([a-zA-Z0-9]+)/);
+  if(m)return m[1];
+  if(/^[a-zA-Z0-9]{4,}$/.test(input))return input;
+  return null;
+}
+
+function fetchChar(id){
+  return new Promise((resolve,reject)=>{
+    // シンプルなコールバック名（英数字のみ）
+    const cb='cocCb'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    let script=null;
+    const cleanup=()=>{
+      try{if(script&&document.head.contains(script))document.head.removeChild(script);}catch(e){}
+      try{delete window[cb];}catch(e){}
+    };
+    window[cb]=data=>{
+      clearTimeout(timer);cleanup();
+      if(!data||typeof data!=='object'){reject(new Error('データが空です'));return;}
+      resolve(data);
+    };
+    script=document.createElement('script');
+    script.src=`https://charasheet.vampire-blood.net/${id}.js?callback=${cb}`;
+    script.onerror=()=>{clearTimeout(timer);cleanup();reject(new Error(`読み込み失敗 (ID: ${id})\n※IDが正しいか、公開設定か確認してください`));};
+    const timer=setTimeout(()=>{cleanup();reject(new Error('タイムアウト (10秒)'));},10000);
+    document.head.appendChild(script);
+  });
+}
+
+function parseChar(raw,id){
+  const n=(...keys)=>{for(const k of keys){const v=raw[k];if(v!=null&&v!==''){const n=parseFloat(v);if(!isNaN(n))return Math.round(n);}}return 0;};
+  const s=(...keys)=>{for(const k of keys){const v=raw[k];if(v&&String(v).trim())return String(v).trim();}return '';};
+  const STR=n('str','STR'),CON=n('con','CON'),POW=n('pow','POW'),DEX=n('dex','DEX');
+  const APP=n('app','APP'),SIZ=n('siz','SIZ'),INT=n('int','INT'),EDU=n('edu','EDU');
+  const hpMax=n('HP','hp','NP_HP')||Math.max(1,Math.round((CON+SIZ)/2));
+  const mpMax=n('MP','mp','NP_MP')||Math.max(1,POW);
+  const sanMax=n('SAN','san','NP_SAN','init_san')||Math.max(1,POW*5);
+  const db=calcDB(STR,SIZ);
+  const weapons=[];
+  for(let i=1;i<=10;i++){
+    const nm=s(`arms_name${i}`,`weapon_name${i}`);
+    const hit=n(`arms_hit${i}`,`weapon_hit${i}`);
+    const dmg=s(`arms_damage${i}`,`weapon_damage${i}`)||'1d6';
+    if(nm&&hit>0)weapons.push({name:nm,hit,dmg,u:false});
+  }
+  const fist=n('fighting_punch','skill_punch')||50;
+  const kick=n('fighting_kick','skill_kick')||25;
+  const dodge=n('dodge','skill_dodge')||Math.max(1,DEX*2);
+  if(weapons.length===0){weapons.push({name:'こぶし（パンチ）',hit:fist,dmg:'1d3',u:true});weapons.push({name:'キック',hit:kick,dmg:'1d6',u:true});}
+  else weapons.push({name:'こぶし（パンチ）',hit:fist,dmg:'1d3',u:true});
+  return{
+    id,_s:'ok',
+    name:s('pc_name','キャラクター名','name')||`探索者#${id.slice(-4)}`,
+    job:s('shokugyou','職業','job')||'',
+    STR,CON,POW,DEX,APP,SIZ,INT,EDU,
+    hpMax,hp:hpMax,mpMax,mp:mpMax,sanMax,san:sanMax,
+    db,weapons,dodge,
+  };
+}
+
+// ── ROSTER UI ─────────────────────────────────────
+function loadSample(){
+  document.getElementById('urlInput').value='https://charasheet.vampire-blood.net/mfc2905efc5208939fc66d6c41a5eb5fb';
   addFromInput();
 }
 
-// ── Add chars ──────────────────────────────────────
-function addFromInput() {
-  const raw = document.getElementById('urlInput').value;
-  const urls = raw.split(/[\s\n,]+/).map(s => s.trim()).filter(Boolean);
-  if (!urls.length) return;
-  document.getElementById('urlInput').value = '';
-  for (const url of urls) addChar(url);
+function addFromInput(){
+  const raw=document.getElementById('urlInput').value;
+  raw.split(/[\s\n,]+/).map(s=>s.trim()).filter(Boolean).forEach(addChar);
+  document.getElementById('urlInput').value='';
 }
 
-function addChar(url) {
-  const id = Loader.extractId(url);
-  if (!id) {
-    showDebug(`❌ URLを認識できません: ${url}`);
-    return;
-  }
-
-  // 重複チェック
-  const current = State.get().roster;
-  if (current.find(c => c.id === id)) {
-    showDebug(`⚠ 既に登録済みです: ${id}`);
-    return;
-  }
-
-  // 仮エントリを追加
-  const entry = { id, _status: 'loading', name: `読み込み中… (${id.slice(-6)})`, job: '' };
-  const s = State.get();
-  s.roster.push(entry);
-  State.save(s);
-  renderAll();
-
-  showDebug(`📡 読み込み中: ${id}`);
-
-  Loader.fetchChar(id)
-    .then(raw => {
-      showDebug(`✅ 受信完了: ${id} (game: ${raw.game || '?'})`);
-      const parsed = Loader.parseChar(raw, id);
-      parsed._status = 'ok';
-      showDebug(`✅ パース完了: ${parsed.name} HP:${parsed.hpMax} DEX:${parsed.DEX}`);
-
-      // Update roster
-      const s = State.get();
-      const idx = s.roster.findIndex(c => c.id === id);
-      if (idx > -1) s.roster[idx] = parsed;
-      State.save(s);
-      renderAll();
+function addChar(url){
+  const id=extractId(url);
+  if(!id){dbg(`❌ URL認識不可: ${url}`);return;}
+  if(App.roster.find(c=>c.id===id)){dbg(`⚠ 重複: ${id}`);return;}
+  App.roster.push({id,_s:'loading',name:`読み込み中… (${id.slice(-6)})`,job:''});
+  renderRoster();
+  dbg(`📡 取得中: ${id}`);
+  fetchChar(id)
+    .then(raw=>{
+      dbg(`✅ 受信: ${id} [${raw.game||raw.data_title||'?'}]`);
+      const parsed=parseChar(raw,id);
+      dbg(`✅ ${parsed.name} HP:${parsed.hpMax} DEX:${parsed.DEX} 武器:${parsed.weapons.filter(w=>!w.u).length}件`);
+      const i=App.roster.findIndex(c=>c.id===id);
+      if(i>-1)App.roster[i]=parsed;
+      renderRoster();updateProceed();
     })
-    .catch(err => {
-      showDebug(`❌ エラー: ${id} — ${err.message}`);
-      const s = State.get();
-      const idx = s.roster.findIndex(c => c.id === id);
-      if (idx > -1) {
-        s.roster[idx] = { id, _status: 'err', name: 'エラー', job: err.message };
-      }
-      State.save(s);
-      renderAll();
+    .catch(err=>{
+      dbg(`❌ ${id}: ${err.message}`);
+      const i=App.roster.findIndex(c=>c.id===id);
+      if(i>-1)App.roster[i]={id,_s:'err',name:'エラー',job:err.message};
+      renderRoster();updateProceed();
     });
 }
 
-function removeChar(id) {
-  const s = State.get();
-  s.roster = s.roster.filter(c => c.id !== id);
-  State.save(s);
-  renderAll();
-}
+function removeChar(id){App.roster=App.roster.filter(c=>c.id!==id);renderRoster();updateProceed();}
 
-// ── Render ─────────────────────────────────────────
-function renderAll() {
-  renderRoster();
-  updateNav();
-  updateProceed();
-}
-
-function renderRoster() {
-  const list  = document.getElementById('rosterList');
-  const empty = document.getElementById('rosterEmpty');
-  const roster = State.get().roster;
-
-  document.getElementById('countNum').textContent =
-    roster.filter(c => c._status === 'ok').length;
-
-  if (roster.length === 0) {
-    list.innerHTML = '';
-    list.appendChild(empty);
+function renderRoster(){
+  const ok=App.roster.filter(c=>c._s==='ok').length;
+  document.getElementById('cntNum').textContent=ok;
+  if(!App.roster.length){
+    document.getElementById('rosterList').innerHTML='<div class="r-empty">まだキャラクターが登録されていません</div>';
     return;
   }
-  if (list.contains(empty)) empty.remove();
-
-  list.innerHTML = roster.map(c => {
-    const ok = c._status === 'ok';
-    const err = c._status === 'err';
-    const loading = c._status === 'loading';
-
-    const dotCls = ok ? 'ok' : err ? 'err' : 'loading';
-    const itemCls = ok ? 'ok' : err ? 'err' : 'loading';
-
-    let nameHtml, metaHtml, statsHtml = '';
-    if (ok) {
-      nameHtml = `<div class="roster-name">${c.name}</div>`;
-      metaHtml = `<div class="roster-meta">${c.job || '探索者'} ／ DB:${c.db?.label || '?'}</div>`;
-      statsHtml = `<div class="roster-stats">STR:${c.STR} DEX:${c.DEX} CON:${c.CON} HP:${c.hpMax} SAN:${c.sanMax}</div>`;
-    } else if (err) {
-      nameHtml = `<div class="roster-name" style="color:var(--blood2)">読み込みエラー</div>`;
-      metaHtml = `<div class="roster-meta" style="color:var(--blood2);font-size:10px">${c.job || ''}</div>`;
-    } else {
-      nameHtml = `<div class="roster-name" style="opacity:.5">${c.name}</div>`;
-      metaHtml = `<div class="roster-meta">...</div>`;
-    }
-
-    return `<div class="roster-item ${itemCls}">
-      <div class="status-dot ${dotCls}"></div>
-      <div class="roster-info">
-        ${nameHtml}
-        ${metaHtml}
-        ${statsHtml}
-      </div>
-      <button class="btn-del" onclick="removeChar('${c.id}')" title="削除">✕</button>
-    </div>`;
+  document.getElementById('rosterList').innerHTML=App.roster.map(c=>{
+    let nh='',mh='',sh='';
+    if(c._s==='ok'){nh=`<div class="ri-n">${c.name}</div>`;mh=`<div class="ri-m">${c.job||'探索者'} ／ DB:${c.db?.l||'?'}</div>`;sh=`<div class="ri-s">STR:${c.STR} DEX:${c.DEX} CON:${c.CON} HP:${c.hpMax} SAN:${c.sanMax}</div>`;}
+    else if(c._s==='err'){nh=`<div class="ri-n" style="color:var(--blood2)">読み込みエラー</div>`;mh=`<div class="ri-m" style="color:var(--blood2);font-size:10px">${c.job}</div>`;}
+    else{nh=`<div class="ri-n" style="opacity:.5">${c.name}</div>`;mh=`<div class="ri-m">読み込み中…</div>`;}
+    return `<div class="r-item ${c._s}"><div class="sdot ${c._s}"></div><div class="ri">${nh}${mh}${sh}</div><button class="btn-del" onclick="removeChar('${c.id}')">✕</button></div>`;
   }).join('');
 }
 
-function updateNav() {
-  const ok = State.get().roster.filter(c => c._status === 'ok').length;
-  ['navBracket','navBattle'].forEach(id => {
-    document.getElementById(id).classList.toggle('disabled', ok < 2);
-  });
+function updateProceed(){
+  const ok=App.roster.filter(c=>c._s==='ok').length;
+  document.getElementById('proceedBtn').disabled=ok<2;
+  document.getElementById('proceedNote').textContent=ok<2?`2名以上登録すると進めます（現在 ${ok} 名）`:`${ok} 名が登録されました ✓`;
 }
 
-function updateProceed() {
-  const ok = State.get().roster.filter(c => c._status === 'ok').length;
-  const btn  = document.getElementById('proceedBtn');
-  const note = document.getElementById('proceedNote');
-  btn.disabled = ok < 2;
-  note.textContent = ok < 2
-    ? `2名以上登録すると進めます（現在 ${ok} 名）`
-    : `${ok} 名が登録されました`;
+function syncR(gid){
+  document.getElementById(gid).querySelectorAll('.ropt').forEach(el=>el.classList.toggle('sel',el.querySelector('input').checked));
 }
 
-// ── Proceed ────────────────────────────────────────
-function proceed() {
-  const mode  = document.querySelector('input[name="mode"]:checked')?.value || 'tournament';
-  const speed = parseInt(document.querySelector('input[name="speed"]:checked')?.value || '150');
-
-  const s = State.get();
-  s.mode  = mode;
-  s.speed = speed;
-  State.save(s);
-
-  window.location.href = 'bracket.html';
+function dbg(msg){
+  const el=document.getElementById('dbgBox');
+  el.classList.add('on');
+  el.textContent=msg+'\n'+el.textContent;
+  el.textContent=el.textContent.split('\n').slice(0,12).join('\n');
 }
 
-// ── Radio helpers ──────────────────────────────────
-function onModeChange(inp) {
-  onRadioChange('modeGroup');
+// ── BRACKET ───────────────────────────────────────
+function buildTournament(chars){
+  const sh=shuffle([...chars]);const ms=[];
+  for(let i=0;i<sh.length-1;i+=2)ms.push({id:ms.length,l:cp(sh[i]),r:cp(sh[i+1]),winner:null,loser:null,isBye:false,round:1});
+  if(sh.length%2===1){const bye=cp(sh[sh.length-1]);ms.push({id:ms.length,l:bye,r:null,winner:bye,loser:null,isBye:true,round:1});}
+  return ms;
 }
 
-function onRadioChange(groupId) {
-  const group = document.getElementById(groupId);
-  group.querySelectorAll('.radio-opt').forEach(el => {
-    el.classList.toggle('selected', el.querySelector('input').checked);
-  });
+function buildNextRound(prev){
+  const ws=prev.filter(m=>m.winner).map(m=>cp(m.winner));
+  if(ws.length<=1)return null;
+  const sh=shuffle(ws),rnd=(prev[0]?.round||1)+1,ms=[];
+  for(let i=0;i<sh.length-1;i+=2)ms.push({id:ms.length,l:sh[i],r:sh[i+1],winner:null,loser:null,isBye:false,round:rnd});
+  if(sh.length%2===1){const bye=sh[sh.length-1];ms.push({id:ms.length,l:bye,r:null,winner:bye,loser:null,isBye:true,round:rnd});}
+  return ms;
 }
 
-// ── Debug log ──────────────────────────────────────
-function showDebug(msg) {
-  const el = document.getElementById('debugInfo');
-  el.classList.add('visible');
-  el.textContent = msg + '\n' + el.textContent;
-  // Keep only last 10 lines
-  const lines = el.textContent.split('\n').slice(0, 10);
-  el.textContent = lines.join('\n');
+function buildTournamentUI(){
+  const chars=App.roster.filter(c=>c._s==='ok');
+  App.matches=buildTournament(chars);App.matchIdx=0;
+  document.getElementById('bracketContent').innerHTML=`
+    <div class="t-hdr"><span class="t-badge">TOURNAMENT</span><span style="font-size:13px;color:var(--text2)">${chars.length}名が参加 — シングルエリミネーション</span></div>
+    <div class="sec-title">第1ラウンド 対戦表</div>
+    <div class="match-cards">${App.matches.map((m,i)=>`
+      <div class="match-card"><div class="mc-title">MATCH ${i+1}${m.isBye?' — 不戦勝':''}</div>
+      <div class="match-fighters">
+        <div class="mf"><div class="mf-n" style="color:var(--blood3)">${m.l.name}</div><div class="mf-m">HP:${m.l.hpMax} DEX:${m.l.DEX}</div></div>
+        <div class="ms">${m.isBye?' ':'VS'}</div>
+        <div class="mf">${m.r?`<div class="mf-n" style="color:var(--teal3)">${m.r.name}</div><div class="mf-m">HP:${m.r.hpMax} DEX:${m.r.DEX}</div>`:`<div class="mf-n" style="color:var(--text4);font-style:italic">（不戦勝）</div>`}</div>
+      </div></div>`).join('')}
+    </div>`;
+  document.getElementById('startNote').textContent=`${App.matches.filter(m=>!m.isBye).length} 試合が行われます`;
 }
 
+function buildPickerUI(){
+  const chars=App.roster.filter(c=>c._s==='ok');
+  const mkL=side=>chars.map((c,i)=>`
+    <label class="ropt" style="margin-bottom:6px">
+      <input type="radio" name="pick${side}" value="${i}" onchange="syncPick('${side}')">
+      <div><div class="ro-l" style="color:var(--${side==='L'?'blood':'teal'}3)">${c.name}</div><div class="ro-s">${c.job||'探索者'} · HP:${c.hpMax} DEX:${c.DEX}</div></div>
+    </label>`).join('');
+  document.getElementById('bracketContent').innerHTML=`
+    <div class="sec-title">対戦相手を選択</div>
+    <div class="picker-grid">
+      <div><div class="pct">🩸 第一の探索者</div><div id="pgL">${mkL('L')}</div></div>
+      <div class="p-vs">VS</div>
+      <div><div class="pct">🌊 第二の探索者</div><div id="pgR">${mkL('R')}</div></div>
+    </div>`;
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('startNote').textContent='両サイドを選択してください';
+}
+
+function syncPick(side){
+  const grp=document.getElementById('pg'+side);
+  if(grp)grp.querySelectorAll('.ropt').forEach(el=>el.classList.toggle('sel',el.querySelector('input').checked));
+  const l=document.querySelector('input[name="pickL"]:checked');
+  const r=document.querySelector('input[name="pickR"]:checked');
+  const same=l&&r&&l.value===r.value;
+  document.getElementById('startBtn').disabled=!l||!r||same;
+  document.getElementById('startNote').textContent=same?'⚠ 同じキャラクターは選べません':'';
+}
+
+// ── BATTLE ENGINE ─────────────────────────────────
+function hitGrade(roll,skill){
+  if(roll===100||roll>=96&&skill<96)return'fumble';
+  if(roll>skill)return'miss';
+  if(roll<=Math.floor(skill/5))return'critical';
+  if(roll<=Math.floor(skill/2))return'special';
+  return'success';
+}
+
+function doAttack(att,def,as,ds){
+  const logs=[];
+  const rw=att.weapons.filter(w=>!w.u);
+  const pool=rw.length>0?rw:att.weapons;
+  const w=pool.reduce((b,x)=>x.hit>b.hit?x:b,pool[0]);
+  if(!w)return logs;
+  const ar=d100(),gr=hitGrade(ar,w.hit);
+  if(gr==='fumble'){logs.push({cls:`log-attack-${as}`,h:`<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="t-miss">ファンブル！体勢を崩した…</span>`});return logs;}
+  if(gr==='miss'){logs.push({cls:`log-attack-${as}`,h:`<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="t-miss">外れた</span>`});return logs;}
+  const gt=gr==='critical'?'<span class="t-crit">【クリティカル！】</span>':gr==='special'?'<span style="color:var(--gold)">【スペシャル】</span>':'';
+  if(gr!=='critical'){
+    const dr=d100();
+    if(dr<=def.dodge){logs.push({cls:`log-attack-${as}`,h:`<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 ${gt} <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="cn-${ds}">${def.name}</span><span class="t-evade">が回避！</span> <span class="t-roll">[${dr}/${def.dodge}%]</span>`});return logs;}
+  }else{logs.push({cls:'log-sys',h:'クリティカルヒット — 回避不可！'});}
+  const dr2=rollDmg(w.dmg);const dbv=att.db.r();
+  let tot=Math.max(1,dr2.t+dbv);
+  if(gr==='special')tot=Math.max(1,Math.ceil(tot*1.5));
+  if(gr==='critical')tot=Math.max(1,tot*2);
+  const ph=def.hp;def.hp=clamp(def.hp-tot,0,def.hpMax);
+  const dbn=dbv!==0?` <span class="t-roll">(DB:${dbv>=0?'+':''}${dbv})</span>`:'';
+  const mn=gr==='special'?' <span class="t-roll">(×1.5)</span>':gr==='critical'?' <span class="t-roll">(×2)</span>':'';
+  logs.push({cls:`log-attack-${as}`,h:`<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 ${gt} <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="t-hit">ヒット！</span> ダメージ: <span class="t-dmg">${tot}</span>${dbn}${mn} <span class="t-roll">(${dr2.e}${att.db.l!=='0'?att.db.l:''})</span> ／ <span class="cn-${ds}">${def.name}</span> HP:${ph}→<b>${def.hp}</b>`});
+  return logs;
+}
+
+function doSan(v,side){
+  if(Math.random()>0.12)return null;
+  const loss=d(4),prev=v.san;v.san=clamp(v.san-loss,0,v.sanMax);
+  return{cls:'log-san',h:`<span class="cn-${side}">${v.name}</span>に恐怖が忍び寄る… <span class="t-san">SAN -${loss}</span> (${prev}→<b>${v.san}</b>)${v.san===0?' <span class="t-crit">—— 発狂！！</span>':''}`,insane:v.san===0};
+}
+
+// ── BATTLE FLOW ───────────────────────────────────
+function loadMatch(){
+  while(App.matchIdx<App.matches.length&&App.matches[App.matchIdx].isBye)App.matchIdx++;
+  if(App.matchIdx>=App.matches.length){advRound();return;}
+  const m=App.matches[App.matchIdx];
+  B.L=cp(m.l);B.R=cp(m.r);
+  [B.L,B.R].forEach(c=>{c.hp=c.hpMax;c.mp=c.mpMax;c.san=c.sanMax;});
+  B.initTurn=B.L.DEX>=B.R.DEX?0:1;B.turn=B.initTurn;B.round=1;B.over=false;B.running=false;
+  B.stats={attacks:0,dmg:0,sanLost:0};
+  clearLog();updRound();renderHP();renderMini();updCnt();renderProg();
+  const btn=document.getElementById('battleBtn');btn.disabled=false;btn.className='btn-btl';btn.textContent='▶ 戦闘実行';
+  document.getElementById('champBanner').classList.remove('show');
+  addLog({cls:'log-round',h:`⟨ MATCH ${App.matchIdx+1} ⟩ ${B.L.name} VS ${B.R.name}`});
+  addLog({cls:'log-sys',h:`先攻判定 — ${B.L.name}:DEX${B.L.DEX} / ${B.R.name}:DEX${B.R.DEX}`});
+  addLog({cls:'log-sys',h:`先攻: <span class="cn-${B.turn===0?'l':'r'}">${B.turn===0?B.L.name:B.R.name}</span>`});
+  addLog({cls:'log-round',h:'⟨ ROUND 1 ⟩'});
+}
+
+function toggleBattle(){if(B.over)return;B.running?pauseBtl():startBtl();}
+function startBtl(){B.running=true;const b=document.getElementById('battleBtn');b.className='btn-btl running';b.textContent='⏸ 一時停止';tick();}
+function pauseBtl(){B.running=false;clearTimeout(B.timer);const b=document.getElementById('battleBtn');b.className='btn-btl';b.textContent='▶ 再開';}
+function tick(){if(!B.running||B.over)return;B.timer=setTimeout(()=>{doTurn();if(!B.over)tick();},App.speed);}
+
+function doTurn(){
+  const as=B.turn===0?'l':'r',ds=B.turn===0?'r':'l';
+  const att=B.turn===0?B.L:B.R,def=B.turn===0?B.R:B.L;
+  B.stats.attacks++;
+  doAttack(att,def,as,ds).forEach(l=>addLog(l));
+  B.stats.dmg=(B.L.hpMax-B.L.hp)+(B.R.hpMax-B.R.hp);
+  const sl=doSan(def,ds);if(sl){addLog(sl);B.stats.sanLost++;}
+  renderHP();updCnt();
+  const dead=def.hp<=0,insane=sl?.insane&&Math.random()<0.3;
+  if(dead||insane){
+    def.hp=0;renderHP();
+    if(insane)addLog({cls:'log-san',h:`<span class="cn-${ds}">${def.name}</span>は完全に正気を失い、戦闘不能となった…`});
+    finishMatch(att,def,as);return;
+  }
+  B.turn=1-B.turn;
+  if(B.turn===B.initTurn){B.round++;updRound();addLog({cls:'log-round',h:`⟨ ROUND ${B.round} ⟩`});
+    if(B.round>100){addLog({cls:'log-result',h:'戦闘は膠着状態に陥った — 引き分け'});B.over=true;B.running=false;document.getElementById('battleBtn').disabled=true;}
+  }
+}
+
+function finishMatch(winner,loser,ws){
+  B.over=true;B.running=false;clearTimeout(B.timer);
+  document.getElementById('battleBtn').disabled=true;document.getElementById('battleBtn').className='btn-btl';
+  addLog({cls:'log-result',h:`⚔ <span class="cn-${ws}">${winner.name}</span> の勝利！（${B.round}ラウンド）`});
+  if(App.matchIdx<App.matches.length){App.matches[App.matchIdx].winner=cp(winner);App.matches[App.matchIdx].loser=cp(loser);}
+  renderProg();showOv(winner);
+}
+
+function showOv(winner){
+  document.getElementById('ovTtl').textContent='決着！';
+  document.getElementById('ovName').textContent=winner.name;
+  document.getElementById('ovSub').textContent=`${B.round}ラウンドの激闘を制した`;
+  document.getElementById('ovStats').innerHTML=`
+    <div class="ov-stat"><div class="ov-sv">${B.round}</div><div class="ov-sl">ROUNDS</div></div>
+    <div class="ov-stat"><div class="ov-sv">${B.stats.attacks}</div><div class="ov-sl">ATTACKS</div></div>
+    <div class="ov-stat"><div class="ov-sv">${B.stats.dmg}</div><div class="ov-sl">DAMAGE</div></div>`;
+  const hasMore=hasNext(),isTrn=App.mode==='tournament';
+  let btns=`<button class="btn" onclick="document.getElementById('resultOv').classList.remove('show')">ログを確認</button>`;
+  if(isTrn&&hasMore)btns+=`<button class="btn btn-p" onclick="nextMatch()">次の試合へ →</button>`;
+  else if(isTrn&&!hasMore)btns+=`<button class="btn btn-p" onclick="tryAdv()">次のラウンドへ →</button>`;
+  else btns+=`<button class="btn btn-p" onclick="resetAll()">最初からやり直す</button>`;
+  document.getElementById('ovBtns').innerHTML=btns;
+  document.getElementById('resultOv').classList.add('show');
+}
+
+function hasNext(){for(let i=App.matchIdx+1;i<App.matches.length;i++)if(!App.matches[i].isBye)return true;return false;}
+function nextMatch(){document.getElementById('resultOv').classList.remove('show');App.matchIdx++;loadMatch();}
+function tryAdv(){document.getElementById('resultOv').classList.remove('show');advRound();}
+
+function advRound(){
+  const ws=App.matches.filter(m=>m.winner).map(m=>cp(m.winner));
+  if(ws.length<=1){showChamp(ws[0]||B.L);return;}
+  const nm=buildNextRound(App.matches);
+  if(!nm){showChamp(ws[0]);return;}
+  App.matches=nm;App.matchIdx=0;
+  addLog({cls:'log-round',h:`⟨ ROUND ${nm[0]?.round||'?'} 開始 — ${ws.length}名が残った ⟩`});
+  renderProg();loadMatch();
+}
+
+function showChamp(c){
+  if(!c)return;
+  addLog({cls:'log-result',h:`🏆 トーナメント優勝: ${c.name}`});
+  document.getElementById('cbName').textContent=c.name;
+  document.getElementById('champBanner').classList.add('show');
+  document.getElementById('resultOv').classList.remove('show');
+}
+
+// ── UI RENDERING ──────────────────────────────────
+function renderHP(){
+  if(!B.L||!B.R)return;
+  document.getElementById('hpL').innerHTML=hpBlock(B.L,'l');
+  document.getElementById('hpR').innerHTML=hpBlock(B.R,'r');
+}
+
+function hpBlock(c,side){
+  const isR=side==='r',fl=isR?'flex-direction:row-reverse':'',ta=isR?'text-align:right':'';
+  const rows=[['HP',Math.max(0,c.hp),c.hpMax,`hp-${side}`],['MP',c.mp,c.mpMax,'mp'],['SAN',c.san,c.sanMax,'san']].map(([l,cur,max,cls])=>
+    `<div class="bar-row" style="${fl}"><div class="bar-lbl" style="${ta}">${l}</div><div class="bar-track" style="flex:1"><div class="bar-fill ${cls}" style="width:${pct(cur,max)}%"></div></div><div class="bar-val">${cur}/${max}</div></div>`).join('');
+  return`<div class="fn ${side}">${c.name}</div>${rows}`;
+}
+
+function pct(c,m){return m?Math.max(0,Math.min(100,Math.round(c/m*100))):0;}
+
+function renderMini(){
+  if(!B.L||!B.R)return;
+  document.getElementById('charMini').innerHTML=miniCard(B.L,'l')+miniCard(B.R,'r');
+}
+
+function miniCard(c,side){
+  const ws=c.weapons.filter(w=>!w.u).slice(0,3);if(!ws.length)ws.push(...c.weapons.slice(0,2));
+  return`<div class="char-mini"><div class="cm-name ${side}">${c.name}</div>
+    <div class="mini-grid">${[['STR',c.STR],['DEX',c.DEX],['CON',c.CON],['POW',c.POW]].map(([k,v])=>`<div class="mini-stat"><div class="ms-l">${k}</div><div class="ms-v">${v||'—'}</div></div>`).join('')}</div>
+    <div class="mini-weps">${ws.map(w=>`<div class="mini-wep"><span>${w.name}</span><span class="mw-dmg">${w.dmg}(${w.hit}%)</span></div>`).join('')}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">回避:${c.dodge}% / DB:${c.db?.l||'?'}</div>
+  </div>`;
+}
+
+function renderProg(){
+  const el=document.getElementById('progList');if(!el)return;
+  el.innerHTML=App.matches.map((m,i)=>{
+    const ic=i===App.matchIdx,id=m.winner!==null,ib=m.isBye;
+    const cls=ib?'bye':id?'done':ic?'current':'';
+    const tc=ic?'cur':id?'win':ib?'bye':'wait';
+    const tt=ic?'▶NOW':id?'✓':ib?'BYE':'待';
+    return`<div class="pi ${cls}"><span class="pi-num">${i+1}</span><span class="mqt ${tc}">${tt}</span><span class="pi-nl">${m.l?.name||'?'}</span><span class="pi-vs">vs</span><span class="pi-nr">${m.r?.name||'—'}</span>${id&&m.winner?`<span class="pi-win">→${m.winner.name}</span>`:''}</div>`;
+  }).join('');
+}
+
+function updRound(){document.getElementById('roundPill').textContent=`ROUND ${B.round}`;document.getElementById('cR').textContent=B.round;}
+function updCnt(){document.getElementById('cA').textContent=B.stats.attacks;document.getElementById('cD').textContent=B.stats.dmg;document.getElementById('cS').textContent=B.stats.sanLost;}
+
+function addLog(e){
+  const log=document.getElementById('battleLog');
+  const div=document.createElement('div');
+  div.className='log-line '+(e.cls||'');
+  div.innerHTML=e.h;
+  log.appendChild(div);log.scrollTop=log.scrollHeight;
+}
+function clearLog(){document.getElementById('battleLog').innerHTML='';}
+
+function setSpd(ms,el){App.speed=ms;document.querySelectorAll('.btn-spd').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+function setSpdUI(ms){const m={30:'spd1',150:'spd2',500:'spd3',1200:'spd4'};document.querySelectorAll('.btn-spd').forEach(b=>b.classList.remove('active'));const id=m[ms];if(id)document.getElementById(id)?.classList.add('active');}
 </script>
 </body>
 </html>
