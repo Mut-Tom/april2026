@@ -477,34 +477,99 @@ function fetchChar(id){
 }
 
 function parseChar(raw,id){
-  const n=(...keys)=>{for(const k of keys){const v=raw[k];if(v!=null&&v!==''){const n=parseFloat(v);if(!isNaN(n))return Math.round(n);}}return 0;};
-  const s=(...keys)=>{for(const k of keys){const v=raw[k];if(v&&String(v).trim())return String(v).trim();}return '';};
-  const STR=n('str','STR'),CON=n('con','CON'),POW=n('pow','POW'),DEX=n('dex','DEX');
-  const APP=n('app','APP'),SIZ=n('siz','SIZ'),INT=n('int','INT'),EDU=n('edu','EDU');
-  const hpMax=n('HP','hp','NP_HP')||Math.max(1,Math.round((CON+SIZ)/2));
-  const mpMax=n('MP','mp','NP_MP')||Math.max(1,POW);
-  const sanMax=n('SAN','san','NP_SAN','init_san')||Math.max(1,POW*5);
-  const db=calcDB(STR,SIZ);
-  const weapons=[];
-  for(let i=1;i<=10;i++){
-    const nm=s(`arms_name${i}`,`weapon_name${i}`);
-    const hit=n(`arms_hit${i}`,`weapon_hit${i}`);
-    const dmg=s(`arms_damage${i}`,`weapon_damage${i}`)||'1d6';
-    if(nm&&hit>0)weapons.push({name:nm,hit,dmg,u:false});
-  }
-  const fist=n('fighting_punch','skill_punch')||50;
-  const kick=n('fighting_kick','skill_kick')||25;
-  const dodge=n('dodge','skill_dodge')||Math.max(1,DEX*2);
-  if(weapons.length===0){weapons.push({name:'こぶし（パンチ）',hit:fist,dmg:'1d3',u:true});weapons.push({name:'キック',hit:kick,dmg:'1d6',u:true});}
-  else weapons.push({name:'こぶし（パンチ）',hit:fist,dmg:'1d3',u:true});
-  return{
-    id,_s:'ok',
-    name:s('pc_name','キャラクター名','name')||`探索者#${id.slice(-4)}`,
-    job:s('shokugyou','職業','job')||'',
-    STR,CON,POW,DEX,APP,SIZ,INT,EDU,
-    hpMax,hp:hpMax,mpMax,mp:mpMax,sanMax,san:sanMax,
-    db,weapons,dodge,
+  // ── 数値取得ヘルパー ──
+  // スカラー値用
+  const nv=(...keys)=>{
+    for(const k of keys){
+      const v=raw[k];
+      if(v!=null&&v!==''){const n=parseFloat(v);if(!isNaN(n))return Math.round(n);}
+    }
+    return 0;
   };
+  // 配列の特定インデックス用
+  const na=(key,idx)=>{
+    const arr=raw[key];
+    if(!Array.isArray(arr))return 0;
+    const v=arr[idx];
+    if(v==null||v==='')return 0;
+    const n=parseFloat(v);
+    return isNaN(n)?0:Math.round(n);
+  };
+  // 文字列取得
+  const sv=(...keys)=>{for(const k of keys){const v=raw[k];if(v&&String(v).trim())return String(v).trim();}return '';};
+  // 配列の文字列
+  const sa=(key,idx)=>{const arr=raw[key];if(!Array.isArray(arr))return '';const v=arr[idx];return(v&&String(v).trim())?String(v).trim():'';};
+
+  // ── 能力値: NP1〜NP8 = STR,CON,POW,DEX,APP,SIZ,INT,EDU ──
+  const STR=nv('NP1'); const CON=nv('NP2'); const POW=nv('NP3'); const DEX=nv('NP4');
+  const APP=nv('NP5'); const SIZ=nv('NP6'); const INT=nv('NP7'); const EDU=nv('NP8');
+
+  // ── HP / MP / SAN ──
+  // HPMax = (CON+SIZ)/2 切り捨て。シートに明示的なHP最大値フィールドはないため計算。
+  const hpMax = Math.max(1, Math.floor((CON+SIZ)/2));
+  // MPMax = POW
+  const mpMax = Math.max(1, POW);
+  // SAN: SAN_Max が最大SAN、SAN_Left が現在残SAN
+  const sanMax = nv('SAN_Max') || Math.max(1, POW*5);
+  const sanCur = nv('SAN_Left') || sanMax;
+
+  // ── ダメージボーナス ──
+  // dmg_bonus フィールドが文字列で入っている ("1d4", "-1d4", "0" など)
+  const dbStr = sv('dmg_bonus') || '';
+  const db = parseDBString(dbStr, STR, SIZ);
+
+  // ── 武器: arms_name / arms_hit / arms_damage が配列形式 ──
+  const weapons=[];
+  const armNames  = raw['arms_name']   || [];
+  const armHits   = raw['arms_hit']    || [];
+  const armDamages= raw['arms_damage'] || [];
+  for(let i=0;i<armNames.length;i++){
+    const nm  = armNames[i]   ? String(armNames[i]).trim()   : '';
+    const hit = armHits[i]    ? parseInt(armHits[i])         : 0;
+    const dmg = armDamages[i] ? String(armDamages[i]).trim() : '1d6';
+    if(nm && hit>0) weapons.push({name:nm, hit, dmg, u:false});
+  }
+
+  // ── 戦闘技能: TBAP配列 = [回避,キック,組み付き,こぶし,頭突き,投擲,マーシャルアーツ,拳銃,SMG,SG,MG,ライフル,...] ──
+  // TBAP[0]=回避, TBAP[3]=こぶし（パンチ）, TBAP[1]=キック
+  const dodge= na('TBAP',0) || Math.max(1, DEX*2);
+  const fist = na('TBAP',3) || 50;
+  const kick = na('TBAP',1) || 25;
+
+  if(weapons.length===0){
+    weapons.push({name:'こぶし（パンチ）', hit:fist, dmg:'1d3', u:true});
+    weapons.push({name:'キック',           hit:kick, dmg:'1d6', u:true});
+  } else {
+    weapons.push({name:'こぶし（パンチ）', hit:fist, dmg:'1d3', u:true});
+  }
+
+  return{
+    id, _s:'ok',
+    name: sv('pc_name','data_title') || `探索者#${id.slice(-4)}`,
+    job:  sv('shuzoku','shokugyou','職業') || '',
+    STR,CON,POW,DEX,APP,SIZ,INT,EDU,
+    hpMax, hp:hpMax,
+    mpMax, mp:mpMax,
+    sanMax, san:sanCur,
+    db, weapons, dodge,
+  };
+}
+
+// ── ダメージボーナス文字列をパース ──
+// dmg_bonus は "1d4", "-1d4", "1d6", "0", "+1d4" などの文字列
+function parseDBString(str, STR, SIZ){
+  if(str && str !== '0' && str !== ''){
+    const s = str.replace(/\s/g,'').toLowerCase();
+    // マイナス
+    if(s==='-1d4') return{l:'-1d4', r:()=>-d(4)};
+    if(s==='-1d6') return{l:'-1d6', r:()=>-d(6)};
+    if(s==='1d4'||s==='+1d4') return{l:'+1d4', r:()=>+d(4)};
+    if(s==='1d6'||s==='+1d6') return{l:'+1d6', r:()=>+d(6)};
+    if(s==='2d6'||s==='+2d6') return{l:'+2d6', r:()=>d(6)+d(6)};
+    if(s==='1d8'||s==='+1d8') return{l:'+1d8', r:()=>+d(8)};
+  }
+  // フォールバック: STR+SIZから計算
+  return calcDB(STR, SIZ);
 }
 
 // ── ROSTER UI ─────────────────────────────────────
@@ -528,9 +593,10 @@ function addChar(url){
   dbg(`📡 取得中: ${id}`);
   fetchChar(id)
     .then(raw=>{
-      dbg(`✅ 受信: ${id} [${raw.game||raw.data_title||'?'}]`);
+      dbg(`✅ 受信: ${id} [game:${raw.game||'?'}] NP1-8: ${[1,2,3,4,5,6,7,8].map(i=>raw['NP'+i]||0).join('/')}`);
       const parsed=parseChar(raw,id);
-      dbg(`✅ ${parsed.name} HP:${parsed.hpMax} DEX:${parsed.DEX} 武器:${parsed.weapons.filter(w=>!w.u).length}件`);
+      const wlist=parsed.weapons.filter(w=>!w.u).map(w=>w.name+'('+w.hit+'%)').join(', ')||'なし';
+      dbg(`✅ ${parsed.name} STR:${parsed.STR} CON:${parsed.CON} POW:${parsed.POW} DEX:${parsed.DEX} SIZ:${parsed.SIZ} HP:${parsed.hpMax} SAN:${parsed.sanMax} DB:${parsed.db.l} 武器:${wlist}`);
       const i=App.roster.findIndex(c=>c.id===id);
       if(i>-1)App.roster[i]=parsed;
       renderRoster();updateProceed();
