@@ -219,6 +219,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 .dbg{background:var(--bg3);border:1px solid var(--border);padding:10px 12px;margin-top:12px;font-size:10px;color:var(--text3);font-family:'Share Tech Mono',monospace;max-height:110px;overflow-y:auto;display:none;white-space:pre-wrap}
 .dbg.on{display:block}
 
+/* PULSE PROCEED */
+#proceedBtn:not(:disabled){animation:glow-pulse 1.8s ease-in-out infinite}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 12px rgba(176,40,40,.25)}50%{box-shadow:0 0 30px rgba(176,40,40,.65),0 0 60px rgba(200,168,74,.15)}}
+.countdown-bar{height:3px;background:var(--bg3);border:1px solid var(--border);overflow:hidden;margin-top:10px}
+.countdown-fill{height:100%;background:linear-gradient(90deg,var(--blood2),var(--gold));transition:width linear}
+
 /* MISC */
 .cfg-block{padding:18px 20px;border-bottom:1px solid var(--border)}
 .cfg-block:last-child{border-bottom:none}
@@ -238,9 +244,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
 </div>
 
 <nav class="step-nav">
-  <div class="snav active" id="nav0" onclick="showPage(0)"><span class="sn">I</span>ROSTER</div>
-  <div class="snav disabled" id="nav1" onclick="showPage(1)"><span class="sn">II</span>BRACKET</div>
-  <div class="snav disabled" id="nav2" onclick="showPage(2)"><span class="sn">III</span>BATTLE</div>
+  <div class="snav active" id="nav0" onclick="showPage(0)"><span class="sn">Ⅰ</span>参加者登録</div>
+  <div class="snav disabled" id="nav1" onclick="showPage(1)"><span class="sn">Ⅱ</span>対戦表</div>
+  <div class="snav disabled" id="nav2" onclick="showPage(2)"><span class="sn">Ⅲ</span>試合</div>
 </nav>
 
 <!-- PAGE 0: ROSTER -->
@@ -297,8 +303,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opac
   <div class="sec">
     <div id="bracketContent"></div>
     <div style="text-align:center;margin-top:8px">
-      <button class="btn btn-p" id="startBtn" onclick="goToBattle()">⚔ 戦闘開始</button>
-      <p style="font-size:11px;color:var(--text3);margin-top:8px" id="startNote"></p>
+      <p style="font-size:13px;color:var(--gold);margin-top:8px;font-family:'Cinzel Decorative',serif;letter-spacing:2px" id="startNote"></p>
+      <div class="countdown-bar" id="countdownBar" style="display:none"><div class="countdown-fill" id="countdownFill" style="width:100%"></div></div>
     </div>
   </div>
 </div>
@@ -385,10 +391,25 @@ function goToBracket(){
   App.mode =document.querySelector('input[name="mode"]:checked')?.value||'tournament';
   App.speed=parseInt(document.querySelector('input[name="speed"]:checked')?.value||'150');
   setSpdUI(App.speed);
-  if(App.mode==='tournament') buildTournamentUI();
-  else                        buildPickerUI();
-  document.getElementById('nav1').classList.remove('disabled');
-  showPage(1);
+  if(App.mode==='tournament'){
+    buildTournamentUI();
+    document.getElementById('nav1').classList.remove('disabled');
+    showPage(1);
+    // カウントダウン後に自動で試合へ
+    const dur=2000,bar=document.getElementById('countdownFill'),barWrap=document.getElementById('countdownBar');
+    barWrap.style.display='';
+    bar.style.transition=`width ${dur}ms linear`;
+    bar.style.width='100%';
+    document.getElementById('startNote').textContent='まもなく試合開始…';
+    setTimeout(()=>{bar.style.width='0%';},30);
+    const tid=setTimeout(()=>{goToBattle();},dur+30);
+    // ナビクリックでキャンセル可能
+    document.getElementById('nav1')._cancelAutoNav=()=>{clearTimeout(tid);barWrap.style.display='none';document.getElementById('startNote').textContent='';};
+  } else {
+    buildPickerUI();
+    document.getElementById('nav1').classList.remove('disabled');
+    showPage(1);
+  }
 }
 
 function goToBattle(){
@@ -692,7 +713,6 @@ function buildPickerUI(){
       <div class="p-vs">VS</div>
       <div><div class="pct">🌊 第二の探索者</div><div id="pgR">${mkL('R')}</div></div>
     </div>`;
-  document.getElementById('startBtn').disabled=true;
   document.getElementById('startNote').textContent='両サイドを選択してください';
 }
 
@@ -702,8 +722,9 @@ function syncPick(side){
   const l=document.querySelector('input[name="pickL"]:checked');
   const r=document.querySelector('input[name="pickR"]:checked');
   const same=l&&r&&l.value===r.value;
-  document.getElementById('startBtn').disabled=!l||!r||same;
-  document.getElementById('startNote').textContent=same?'⚠ 同じキャラクターは選べません':'';
+  if(same){document.getElementById('startNote').textContent='⚠ 同じキャラクターは選べません';}
+  else if(l&&r){document.getElementById('startNote').textContent='⚔ 試合開始！';setTimeout(()=>goToBattle(),400);}
+  else{document.getElementById('startNote').textContent='両サイドを選択してください';}
 }
 
 // ── BATTLE ENGINE ─────────────────────────────────
@@ -756,12 +777,13 @@ function loadMatch(){
   B.initTurn=B.L.DEX>=B.R.DEX?0:1;B.turn=B.initTurn;B.round=1;B.over=false;B.running=false;
   B.stats={attacks:0,dmg:0,sanLost:0};
   clearLog();updRound();renderHP();renderMini();updCnt();renderProg();
-  const btn=document.getElementById('battleBtn');btn.disabled=false;btn.className='btn-btl';btn.textContent='▶ 戦闘実行';
+  const btn=document.getElementById('battleBtn');btn.disabled=false;btn.className='btn-btl';btn.textContent='⏸ 一時停止';
   document.getElementById('champBanner').classList.remove('show');
   addLog({cls:'log-round',h:`⟨ MATCH ${App.matchIdx+1} ⟩ ${B.L.name} VS ${B.R.name}`});
   addLog({cls:'log-sys',h:`先攻判定 — ${B.L.name}:DEX${B.L.DEX} / ${B.R.name}:DEX${B.R.DEX}`});
   addLog({cls:'log-sys',h:`先攻: <span class="cn-${B.turn===0?'l':'r'}">${B.turn===0?B.L.name:B.R.name}</span>`});
   addLog({cls:'log-round',h:'⟨ ROUND 1 ⟩'});
+  setTimeout(()=>startBtl(),600);
 }
 
 function toggleBattle(){if(B.over)return;B.running?pauseBtl():startBtl();}
