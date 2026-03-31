@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoC Battle — ロスター登録</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+.layout { display: grid; grid-template-columns: 1fr 340px; gap: 0; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+.main-col  { border-right: 1px solid var(--border); }
+.aside-col { background: var(--bg2); }
+
+.roster-list { display: flex; flex-direction: column; gap: 7px; }
+.roster-empty {
+  color: var(--text3); font-style: italic; font-size: 13px;
+  text-align: center; padding: 32px;
+  border: 1px dashed var(--border);
+}
+
+.config-block {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.config-block:last-child { border-bottom: none; }
+
+.radio-opt {
+  display: flex; align-items: flex-start; gap: 8px;
+  cursor: pointer;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 6px;
+  transition: all .2s;
+}
+.radio-opt:last-child { margin-bottom: 0; }
+.radio-opt:hover { border-color: var(--border2); background: var(--bg3); }
+.radio-opt.selected { border-color: var(--gold); background: var(--bg3); }
+.radio-opt input { accent-color: var(--gold); margin-top: 2px; flex-shrink:0; }
+.radio-opt-content { }
+.radio-opt-label { font-size: 12px; color: var(--text2); }
+.radio-opt-sub   { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.radio-opt.selected .radio-opt-label { color: var(--gold2); }
+
+.url-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.url-row .input { font-size: 11px; }
+
+.count-indicator {
+  text-align: center; font-size: 11px;
+  color: var(--text3); margin-bottom: 10px;
+  font-family: 'Share Tech Mono', monospace;
+}
+.count-num { color: var(--gold); font-size: 16px; font-weight: 700; }
+
+.debug-info {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--text3);
+  font-family: 'Share Tech Mono', monospace;
+  max-height: 120px;
+  overflow-y: auto;
+  display: none;
+}
+.debug-info.visible { display: block; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="page-header" style="padding-bottom:32px">
+  <div class="eyebrow">Cthulhu Mythos TRPG — Battle Simulator</div>
+  <h1 class="page-title">闘技場</h1>
+  <p class="page-sub">The Arena of Fallen Investigators</p>
+</div>
+
+<nav class="step-nav">
+  <a class="step-nav-item active" href="index.html">
+    <span class="step-num">I</span>ROSTER
+  </a>
+  <a class="step-nav-item disabled" href="bracket.html" id="navBracket">
+    <span class="step-num">II</span>BRACKET
+  </a>
+  <a class="step-nav-item disabled" href="battle.html" id="navBattle">
+    <span class="step-num">III</span>BATTLE
+  </a>
+</nav>
+
+<div class="layout">
+  <!-- ── メインカラム ── -->
+  <div class="main-col">
+    <div class="section">
+      <div class="section-title">キャラクターシートを登録</div>
+
+      <div class="url-row">
+        <input class="input" id="urlInput" type="text"
+          placeholder="https://charasheet.vampire-blood.net/xxxxx  または  ID"
+          onkeydown="if(event.key==='Enter') addFromInput()">
+        <button class="btn" onclick="addFromInput()" style="white-space:nowrap">＋ 追加</button>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:4px;font-style:italic">
+        ※ 複数URLはスペースまたは改行区切りでまとめて貼り付け可能
+      </p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;font-style:italic">
+        ※ サンプル: <a href="#" onclick="loadSample();return false" style="color:var(--gold);text-decoration:none">ダリア・ハミルトンを読み込む</a>
+      </p>
+
+      <div class="roster-list" id="rosterList">
+        <div class="roster-empty" id="rosterEmpty">まだキャラクターが登録されていません</div>
+      </div>
+
+      <div class="debug-info" id="debugInfo"></div>
+    </div>
+  </div>
+
+  <!-- ── サイドバー ── -->
+  <div class="aside-col">
+    <div class="config-block">
+      <div class="section-title" style="margin-bottom:14px">戦闘設定</div>
+
+      <div class="count-indicator">
+        登録済み: <span class="count-num" id="countNum">0</span> 名
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;letter-spacing:3px;color:var(--text3);margin-bottom:8px;font-family:'Share Tech Mono',monospace">
+          戦闘モード
+        </div>
+        <div id="modeGroup">
+          <label class="radio-opt selected">
+            <input type="radio" name="mode" value="tournament" checked onchange="onModeChange(this)">
+            <div class="radio-opt-content">
+              <div class="radio-opt-label">🏆 トーナメント</div>
+              <div class="radio-opt-sub">ランダムで対戦表を作成・シングルエリミネーション</div>
+            </div>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="mode" value="1v1" onchange="onModeChange(this)">
+            <div class="radio-opt-content">
+              <div class="radio-opt-label">⚔ 1 vs 1</div>
+              <div class="radio-opt-sub">対戦相手を手動で選んで1試合のみ</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;letter-spacing:3px;color:var(--text3);margin-bottom:8px;font-family:'Share Tech Mono',monospace">
+          戦闘速度
+        </div>
+        <div id="speedGroup">
+          <label class="radio-opt">
+            <input type="radio" name="speed" value="30" onchange="onRadioChange('speedGroup')">
+            <div class="radio-opt-content">
+              <div class="radio-opt-label">⚡ 超高速 (30ms)</div>
+            </div>
+          </label>
+          <label class="radio-opt selected">
+            <input type="radio" name="speed" value="150" checked onchange="onRadioChange('speedGroup')">
+            <div class="radio-opt-content">
+              <div class="radio-opt-label">▶ 高速 (150ms)</div>
+            </div>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="speed" value="500" onchange="onRadioChange('speedGroup')">
+            <div class="radio-opt-content">
+              <div class="radio-opt-label">◎ 普通 (500ms)</div>
+            </div>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="speed" value="1200" onchange="onRadioChange('speedGroup')">
+            <div class="radio-opt-content">
+              <div class="radio-opt-label">🐢 ゆっくり (1.2秒)</div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-block">
+      <button class="btn btn-primary btn-block" id="proceedBtn" disabled onclick="proceed()">
+        次のステップへ →
+      </button>
+      <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px" id="proceedNote">
+        2名以上登録すると進めます
+      </p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script src="js/state.js"></script>
+<script src="js/loader.js"></script>
+<script>
+
+// ── Init ───────────────────────────────────────────
+const S = State.get();
+renderAll();
+
+function loadSample() {
+  document.getElementById('urlInput').value =
+    'https://charasheet.vampire-blood.net/mfc2905efc5208939fc66d6c41a5eb5fb';
+  addFromInput();
+}
+
+// ── Add chars ──────────────────────────────────────
+function addFromInput() {
+  const raw = document.getElementById('urlInput').value;
+  const urls = raw.split(/[\s\n,]+/).map(s => s.trim()).filter(Boolean);
+  if (!urls.length) return;
+  document.getElementById('urlInput').value = '';
+  for (const url of urls) addChar(url);
+}
+
+function addChar(url) {
+  const id = Loader.extractId(url);
+  if (!id) {
+    showDebug(`❌ URLを認識できません: ${url}`);
+    return;
+  }
+
+  // 重複チェック
+  const current = State.get().roster;
+  if (current.find(c => c.id === id)) {
+    showDebug(`⚠ 既に登録済みです: ${id}`);
+    return;
+  }
+
+  // 仮エントリを追加
+  const entry = { id, _status: 'loading', name: `読み込み中… (${id.slice(-6)})`, job: '' };
+  const s = State.get();
+  s.roster.push(entry);
+  State.save(s);
+  renderAll();
+
+  showDebug(`📡 読み込み中: ${id}`);
+
+  Loader.fetchChar(id)
+    .then(raw => {
+      showDebug(`✅ 受信完了: ${id} (game: ${raw.game || '?'})`);
+      const parsed = Loader.parseChar(raw, id);
+      parsed._status = 'ok';
+      showDebug(`✅ パース完了: ${parsed.name} HP:${parsed.hpMax} DEX:${parsed.DEX}`);
+
+      // Update roster
+      const s = State.get();
+      const idx = s.roster.findIndex(c => c.id === id);
+      if (idx > -1) s.roster[idx] = parsed;
+      State.save(s);
+      renderAll();
+    })
+    .catch(err => {
+      showDebug(`❌ エラー: ${id} — ${err.message}`);
+      const s = State.get();
+      const idx = s.roster.findIndex(c => c.id === id);
+      if (idx > -1) {
+        s.roster[idx] = { id, _status: 'err', name: 'エラー', job: err.message };
+      }
+      State.save(s);
+      renderAll();
+    });
+}
+
+function removeChar(id) {
+  const s = State.get();
+  s.roster = s.roster.filter(c => c.id !== id);
+  State.save(s);
+  renderAll();
+}
+
+// ── Render ─────────────────────────────────────────
+function renderAll() {
+  renderRoster();
+  updateNav();
+  updateProceed();
+}
+
+function renderRoster() {
+  const list  = document.getElementById('rosterList');
+  const empty = document.getElementById('rosterEmpty');
+  const roster = State.get().roster;
+
+  document.getElementById('countNum').textContent =
+    roster.filter(c => c._status === 'ok').length;
+
+  if (roster.length === 0) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    return;
+  }
+  if (list.contains(empty)) empty.remove();
+
+  list.innerHTML = roster.map(c => {
+    const ok = c._status === 'ok';
+    const err = c._status === 'err';
+    const loading = c._status === 'loading';
+
+    const dotCls = ok ? 'ok' : err ? 'err' : 'loading';
+    const itemCls = ok ? 'ok' : err ? 'err' : 'loading';
+
+    let nameHtml, metaHtml, statsHtml = '';
+    if (ok) {
+      nameHtml = `<div class="roster-name">${c.name}</div>`;
+      metaHtml = `<div class="roster-meta">${c.job || '探索者'} ／ DB:${c.db?.label || '?'}</div>`;
+      statsHtml = `<div class="roster-stats">STR:${c.STR} DEX:${c.DEX} CON:${c.CON} HP:${c.hpMax} SAN:${c.sanMax}</div>`;
+    } else if (err) {
+      nameHtml = `<div class="roster-name" style="color:var(--blood2)">読み込みエラー</div>`;
+      metaHtml = `<div class="roster-meta" style="color:var(--blood2);font-size:10px">${c.job || ''}</div>`;
+    } else {
+      nameHtml = `<div class="roster-name" style="opacity:.5">${c.name}</div>`;
+      metaHtml = `<div class="roster-meta">...</div>`;
+    }
+
+    return `<div class="roster-item ${itemCls}">
+      <div class="status-dot ${dotCls}"></div>
+      <div class="roster-info">
+        ${nameHtml}
+        ${metaHtml}
+        ${statsHtml}
+      </div>
+      <button class="btn-del" onclick="removeChar('${c.id}')" title="削除">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateNav() {
+  const ok = State.get().roster.filter(c => c._status === 'ok').length;
+  ['navBracket','navBattle'].forEach(id => {
+    document.getElementById(id).classList.toggle('disabled', ok < 2);
+  });
+}
+
+function updateProceed() {
+  const ok = State.get().roster.filter(c => c._status === 'ok').length;
+  const btn  = document.getElementById('proceedBtn');
+  const note = document.getElementById('proceedNote');
+  btn.disabled = ok < 2;
+  note.textContent = ok < 2
+    ? `2名以上登録すると進めます（現在 ${ok} 名）`
+    : `${ok} 名が登録されました`;
+}
+
+// ── Proceed ────────────────────────────────────────
+function proceed() {
+  const mode  = document.querySelector('input[name="mode"]:checked')?.value || 'tournament';
+  const speed = parseInt(document.querySelector('input[name="speed"]:checked')?.value || '150');
+
+  const s = State.get();
+  s.mode  = mode;
+  s.speed = speed;
+  State.save(s);
+
+  window.location.href = 'bracket.html';
+}
+
+// ── Radio helpers ──────────────────────────────────
+function onModeChange(inp) {
+  onRadioChange('modeGroup');
+}
+
+function onRadioChange(groupId) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.radio-opt').forEach(el => {
+    el.classList.toggle('selected', el.querySelector('input').checked);
+  });
+}
+
+// ── Debug log ──────────────────────────────────────
+function showDebug(msg) {
+  const el = document.getElementById('debugInfo');
+  el.classList.add('visible');
+  el.textContent = msg + '\n' + el.textContent;
+  // Keep only last 10 lines
+  const lines = el.textContent.split('\n').slice(0, 10);
+  el.textContent = lines.join('\n');
+}
+
+</script>
+</body>
+</html>
