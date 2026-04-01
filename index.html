@@ -37,6 +37,13 @@ body::before{
     radial-gradient(ellipse 50% 50% at 50% 100%, rgba(224,48,48,.08) 0%, transparent 50%);
   animation:bgShift 8s ease-in-out infinite alternate;
 }
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); box-shadow: 0 4px 25px rgba(68,136,255,0.6); }
+  100% { transform: scale(1); }
+}
+
 @keyframes bgShift{
   from{opacity:1}
   to{opacity:.6}
@@ -545,10 +552,8 @@ footer a:hover {
     <div style="width: 100%; height: 320px; background: linear-gradient(to bottom, transparent 60%, var(--bg) 100%), url('header.png') center/cover no-repeat; position: relative; display: flex; align-items: center; justify-content: center;">
       
       <div style="text-align: center; z-index: 2;">
-        <h1 style="font-family: 'Kaisei Decol', serif; font-size: clamp(32px, 7vw, 60px); color: #fff; text-shadow: 0 0 20px rgba(232,192,32,0.6), 0 4px 12px rgba(0,0,0,0.9); margin: 0; background: none; -webkit-text-fill-color: initial; display: flex; align-items: center; justify-content: center; gap: 15px;">
-          <span class="skull" style="font-size: 0.8em; opacity: 0.9;">💀</span> 
-          CoC 探索者バトル！ 
-          <span class="skull" style="font-size: 0.8em; opacity: 0.9;">💀</span>
+        <h1 style="font-family: 'Kaisei Decol', serif; font-size: clamp(32px, 7vw, 60px); color: #fff; text-shadow: 0 0 20px rgba(232,192,32,0.6), 0 4px 12px rgba(0,0,0,0.9); margin: 0; background: none; -webkit-text-fill-color: initial;">
+          CoC 探索者バトル！
         </h1>
         <div style="color: var(--yellow2); font-size: 11px; letter-spacing: 0.6em; margin-top: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-weight: 900; opacity: 0.9;">APRIL FOOL 2026 SPECIAL</div>
       </div>
@@ -574,11 +579,15 @@ footer a:hover {
 
   <!-- URL入力 -->
   <div class="panel">
-    <div class="panel-title"><span class="icon">🔗</span>キャラクターシートを追加</div>
+    <div class="panel-title">
+      <span class="icon">🔗</span>キャラクターシートを追加 
+      <span style="font-size: 10px; opacity: 0.7; font-weight: 400; margin-left: 4px;">(キャラクター保管所 / Charaeno 対応)</span>
+    </div>
     <div class="add-row" style="flex-direction: column; gap: 10px;">
       <textarea class="url-inp" id="urlInput" 
         style="min-height: 100px; resize: vertical;"
-        placeholder="https://charasheet.vampire-blood.net/xxxxx&#13;&#10;https://charasheet.vampire-blood.net/yyyyy&#13;&#10;（URLを1行ずつ貼り付けてください）"></textarea>
+        placeholder="https://charasheet.vampire-blood.net/xxxxxx&#13;&#10;https://charaeno.com/6th/xxxxxx&#13;&#10;（URLを1行ずつ貼り付けてください）">
+      </textarea>
       <button class="btn-add" onclick="addFromInput()" style="width: 100%; padding: 14px;">＋ 探索者を一括追加</button>
     </div>
     <p class="hint">
@@ -664,18 +673,22 @@ footer a:hover {
   </div>
 
   <!-- コントロール -->
-<div class="btl-ctrl">
-  <button class="btn-play" id="playBtn" onclick="toggleBattle()" disabled>▶ 開始</button>
-  <button class="spd-btn" onclick="resetAll()" style="margin-left:auto">↩ 最初から</button>
-</div>
+  <div class="btl-ctrl">
+    <button class="btn-play" id="playBtn" onclick="toggleBattle()" disabled>▶ 開始</button>
+    <button class="spd-btn" onclick="resetAll()" style="margin-left:auto">↩ 最初から</button>
+  </div>
 
   <!-- トーナメント進行 -->
-<div id="matchQueueWrap">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);">📋 対戦表</div>
-      <button id="nextStepBtn" class="rbtn primary" style="display:none; margin:0; padding:4px 12px; font-size:11px;" onclick="handleNextStep()"></button>
-    </div>
-    <div class="match-queue" id="matchQueue"></div>
+  <div id="nextStepArea" style="margin: 16px 0; text-align: center;">
+    <button id="nextStepBtn" class="rbtn primary" 
+      style="display:none; width: 100%; padding: 16px; font-size: 16px; box-shadow: 0 4px 20px rgba(68,136,255,0.4); animation: pulse 2s infinite;" 
+      onclick="handleNextStep()">
+    </button>
+  </div>
+
+  <div id="matchQueueWrap" style="max-height: 300px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2); margin-bottom:8px;">📋 対戦表</div>
+      <div class="match-queue" id="matchQueue"></div>
   </div>
 
   <!-- チャンピオン -->
@@ -781,25 +794,42 @@ function calcDB(str,siz){
   return    {l:'+2d6',r:()=>d(6)+d(6)};
 }
 
-function parseDBString(str,STR,SIZ){
-  if(str&&str!=='0'){
-    const s=str.replace(/\s/g,'').toLowerCase();
-    if(s==='-1d4')return{l:'-1d4',r:()=>-d(4)};
-    if(s==='-1d6')return{l:'-1d6',r:()=>-d(6)};
-    if(s==='1d4'||s==='+1d4')return{l:'+1d4',r:()=>+d(4)};
-    if(s==='1d6'||s==='+1d6')return{l:'+1d6',r:()=>+d(6)};
-    if(s==='2d6'||s==='+2d6')return{l:'+2d6',r:()=>d(6)+d(6)};
-    if(s==='1d8'||s==='+1d8')return{l:'+1d8',r:()=>+d(8)};
+function parseDBString(str, STR, SIZ) {
+  if (str !== null && str !== undefined && str !== '') {
+    const s = str.replace(/\s/g, '').toLowerCase();
+    
+    // ★追加：0や+0、-0の場合は、自動計算せず 0 を返す
+    if (s === '0' || s === '+0' || s === '-0' || s === '+0db' || s === '0db') {
+      return { l: '0', r: () => 0 };
+    }
+    
+    if (s === '-1d4') return { l: '-1d4', r: () => -d(4) };
+    if (s === '-1d6') return { l: '-1d6', r: () => -d(6) };
+    if (s === '1d4' || s === '+1d4') return { l: '+1d4', r: () => +d(4) };
+    if (s === '1d6' || s === '+1d6') return { l: '+1d6', r: () => +d(6) };
+    if (s === '2d6' || s === '+2d6') return { l: '+2d6', r: () => d(6) + d(6) };
+    if (s === '1d8' || s === '+1d8') return { l: '+1d8', r: () => +d(8) };
   }
-  return calcDB(STR,SIZ);
+  // シートが空（または認識不能）な場合のみ、能力値から計算する
+  return calcDB(STR, SIZ);
 }
 
 // ══ LOADER ═══════════════════════════════════════
 function extractId(input){
-  input=input.trim();
-  const m=input.match(/charasheet\.vampire-blood\.net\/([a-zA-Z0-9]+)/);
-  if(m)return m[1];
-  if(/^[a-zA-Z0-9]{4,}$/.test(input))return input;
+  input = input.trim();
+  // vampire-blood
+  const m = input.match(/charasheet\.vampire-blood\.net\/([a-zA-Z0-9]+)/);
+  if(m) return { type: 'vampire', id: m[1] };
+  
+  // いあきゃら
+  const i = input.match(/iachara\.com\/view\/(\d+)/);
+  if(i) return { type: 'iachara', id: i[1] };
+
+  // ★キャラエノ：版(6th/7th)を確実に保持
+  const ce = input.match(/charaeno\.com\/(6th|7th)\/([A-Za-z0-9_\-]+)/);
+  if(ce) return { type: 'charaeno', edition: ce[1], id: ce[2] };
+  
+  if(/^[a-zA-Z0-9]{4,}$/.test(input)) return { type: 'vampire', id: input };
   return null;
 }
 
@@ -820,6 +850,28 @@ function fetchChar(id){
     script.src=`https://charasheet.vampire-blood.net/${id}.js?callback=${cb}`;
     script.onerror=()=>{clearTimeout(timer);cleanup();reject(new Error(`読み込み失敗 (ID: ${id})`));};
     const timer=setTimeout(()=>{cleanup();reject(new Error('タイムアウト (10秒)'));},10000);
+    document.head.appendChild(script);
+  });
+}
+
+function fetchIachara(id){
+  return new Promise((resolve,reject)=>{
+    const cb='iacharaCb'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    let script=null;
+    const cleanup=()=>{
+      try{if(script&&document.head.contains(script))document.head.removeChild(script);}catch(e){}
+      try{delete window[cb];}catch(e){}
+    };
+    window[cb]=data=>{
+      clearTimeout(timer);cleanup();
+      if(!data){reject(new Error('データが空です'));return;}
+      resolve(data);
+    };
+    script=document.createElement('script');
+    // いあきゃらのJSONP用エンドポイント（callbackパラメータを付与）
+    script.src=`https://iachara.com/view/json/${id}?callback=${cb}`;
+    script.onerror=()=>{clearTimeout(timer);cleanup();reject(new Error(`いあきゃらの読み込みに失敗しました`));};
+    const timer=setTimeout(()=>{cleanup();reject(new Error('タイムアウト'));},10000);
     document.head.appendChild(script);
   });
 }
@@ -918,8 +970,9 @@ function parseChar(raw, id) {
 
   return {
     id, _s: 'ok',
-    name: sv('pc_name', 'data_title') || `探索者#${id.slice(-4)}`,
-    job: (is7th ? "【7版】" : "") + (sv('shuzoku', 'shokugyou', '職業') || ''),
+    name: sv('pc_name', 'data_title') || `探索者#${id.slice(-4)}`, 
+    job: sv('shuzoku', 'shokugyou', '職業') || '',
+    is7th: is7th,
     STR, CON, POW, DEX, APP, SIZ, INT, EDU,
     hpMax, hp: hpMax, mpMax, mp: mpMax, sanMax, san: sanCur,
     db, weapons, dodge,
@@ -932,20 +985,140 @@ function parseChar(raw, id) {
   };
 }
 
-// ══ ROSTER UI ════════════════════════════════════
-function loadSample(){
-  const samples = [
-    'https://charasheet.vampire-blood.net/mfc2905efc5208939fc66d6c41a5eb5fb',
-    'https://charasheet.vampire-blood.net/mda12b08630fc5b0ebb8f726788907da8',
-    'https://charasheet.vampire-blood.net/m74bae49336af9f3dde6c20f774246c93',
-    'https://charasheet.vampire-blood.net/mb7b8954fedc4d88d936bb68bc506127d'
-  ];
-  // 入力欄に4名分のURLをセット
-  document.getElementById('urlInput').value = samples.join('\n');
-  // 追加処理を実行
-  addFromInput();
+function parseIachara(raw, id) {
+  // いあきゃらは基本的に6版データが多いですが、ステータス配置が異なります
+  const STR = parseInt(raw.status.STR || 10);
+  const CON = parseInt(raw.status.CON || 10);
+  const POW = parseInt(raw.status.POW || 10);
+  const DEX = parseInt(raw.status.DEX || 10);
+  const SIZ = parseInt(raw.status.SIZ || 10);
+  
+  const hpMax = Math.ceil((CON + SIZ) / 2);
+  const sanMax = POW * 5;
+  const sanCur = parseInt(raw.status.SAN || sanMax);
+
+  // DB計算
+  const dbData = calcDB(STR, SIZ);
+  
+  // 武器の取得（いあきゃらの武器リストを走査）
+  const weapons = [];
+  if (raw.weapons && raw.weapons.length > 0) {
+    raw.weapons.forEach(w => {
+      if (w.name && w.value) {
+        weapons.push({
+          name: w.name,
+          hit: parseInt(w.value),
+          dmg: w.damage || '1d3',
+          u: false
+        });
+      }
+    });
+  }
+  
+  // 回避
+  const dodge = parseInt(raw.skills.find(s => s.name === '回避')?.value || (DEX * 2));
+
+  if (weapons.length === 0) {
+    weapons.push({ name: 'こぶし（パンチ）', hit: 50, dmg: '1d3', u: true });
+  }
+
+  return {
+    id, _s: 'ok',
+    name: raw.name || `探索者#${id}`,
+    job: raw.job || '探索者',
+    STR, CON, POW, DEX, SIZ,
+    hpMax, hp: hpMax, sanMax, san: sanCur,
+    db: { l: dbData.l, fixed: dbData.r() },
+    weapons, dodge,
+    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0 }
+  };
 }
 
+async function fetchCharaeno(edition, id) {
+  const apiUrl = `https://charaeno.com/api/v1/${edition}/${id}/summary`;
+
+  try {
+    const res = await fetch(apiUrl);
+    
+    if (!res.ok) {
+      throw new Error(`APIエラー (HTTP ${res.status})。非公開設定の可能性があります。`);
+    }
+    
+    const json = await res.json();
+
+    // データが正しく取得できているか確認
+    if (!json || !json.characteristics) {
+      throw new Error('キャラクターデータが不完全です');
+    }
+
+    return json;
+  } catch (e) {
+    throw new Error(`キャラエノ取得失敗: ${e.message}`);
+  }
+}
+
+function parseCharaeno(json, id, edition) {
+  const c = json.characteristics || {};
+  const a = json.attribute || {};
+  const is7th = (edition === '7th'); 
+
+  // 能力値の計算
+  const STR = is7th ? Math.floor((c.str || 0) / 5) : (c.str || 0);
+  const CON = is7th ? Math.floor((c.con || 0) / 5) : (c.con || 0);
+  const POW = is7th ? Math.floor((c.pow || 0) / 5) : (c.pow || 0);
+  const DEX = is7th ? Math.floor((c.dex || 0) / 5) : (c.dex || 0);
+  const SIZ = is7th ? Math.floor((c.siz || 0) / 5) : (c.siz || 0);
+  
+  const hpMax = a.hp || Math.max(1, Math.floor((CON + SIZ) / 2));
+  
+  let sanCur = (json.attribute?.san?.value !== undefined) 
+               ? parseInt(json.attribute.san.value, 10) 
+               : POW * 5;
+  const sanMax = json.attribute?.san?.max ? parseInt(json.attribute.san.max, 10) : 99;
+  
+  // DBの取得（シートの値を優先）
+  const dbData = parseDBString(a.db || '', STR, SIZ);
+
+  const sm = {};
+  if (Array.isArray(json.skills)) {
+    json.skills.forEach(s => { sm[s.name] = s.value; });
+  }
+
+  const weapons = [];
+  if (Array.isArray(json.weapons)) {
+    json.weapons.forEach(w => {
+      const nm = (w.name || '').trim();
+      if (!nm) return;
+      let hit = parseInt(w.value) || sm[nm] || 0;
+      if (is7th) hit = Math.floor(hit * 0.8);
+      weapons.push({ name: nm, hit: hit, dmg: w.damage || '1d6', u: false });
+    });
+  }
+
+  if (weapons.length === 0) {
+    const brawl = is7th ? (sm['近接戦闘（格闘）'] || 25) : (sm['こぶし'] || 50);
+    weapons.push({ name: '素手', hit: brawl, dmg: '1d3', u: true });
+  }
+
+  return {
+    id, _s: 'ok',
+    name: json.name || (sv ? sv('pc_name') : `探索者#${id}`),
+    job: json.occupation || (sv ? sv('shokugyou') : '探索者'),
+    is7th: is7th, // 7版ならtrue
+    STR: STR,
+    CON: CON,
+    POW: POW,
+    DEX: DEX,
+    SIZ: SIZ,
+    hpMax, hp: hpMax, sanMax, san: sanCur,
+    db: { l: dbData.l, fixed: dbData.r() },
+    weapons,
+    dodge: is7th ? Math.floor((sm['回避'] || (DEX * 5)) / 5) : (sm['回避'] || (DEX * 2)),
+    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0 }
+  };
+}
+
+// ══ ROSTER UI ════════════════════════════════════
 function addFromInput(){
   const raw = document.getElementById('urlInput').value;
   // 空白、改行、カンマ、または「http」という文字の直前で分割するように強化
@@ -956,27 +1129,44 @@ function addFromInput(){
 }
 
 function addChar(url){
-  const id=extractId(url);
-  if(!id){dbg(`❌ URL認識不可: ${url}`);return;}
-  if(App.roster.find(c=>c.id===id)){dbg(`⚠ 重複: ${id}`);return;}
-  App.roster.push({id,_s:'loading',name:'読み込み中…',job:''});
+  const target = extractId(url);
+  if(!target){dbg(`❌ URL認識不可: ${url}`);return;}
+  if(App.roster.find(c=>c.id===target.id)){dbg(`⚠ 重複: ${target.id}`);return;}
+  
+  App.roster.push({id:target.id, _s:'loading', name:'読み込み中…', job:''});
   renderGrid();
-  dbg(`📡 取得中: ${id}`);
-  fetchChar(id)
-    .then(raw=>{
-      dbg(`✅ ${raw['NP1']}/${raw['NP2']}/${raw['NP3']}/${raw['NP4']} SIZ:${raw['NP6']} SAN:${raw['SAN_Max']}`);
-      const p=parseChar(raw,id);
-      dbg(`✅ ${p.name} HP:${p.hpMax} SAN:${p.sanMax} DB:${p.db.l} 武器:${p.weapons.filter(w=>!w.u).map(w=>w.name).join('/')}`);
-      const i=App.roster.findIndex(c=>c.id===id);
-      if(i>-1)App.roster[i]=p;
-      renderGrid();updateStartBtn();
-    })
-    .catch(err=>{
-      dbg(`❌ ${id}: ${err.message}`);
-      const i=App.roster.findIndex(c=>c.id===id);
-      if(i>-1)App.roster[i]={id,_s:'err',name:'読み込みエラー',job:err.message};
-      renderGrid();updateStartBtn();
-    });
+
+  if(target.type === 'vampire') {
+    fetchChar(target.id).then(raw => {
+      const p = parseChar(raw, target.id);
+      processAddedChar(target.id, p);
+    }).catch(handleErr);
+  } else if(target.type === 'iachara') {
+    fetchIachara(target.id).then(raw => {
+      const p = parseIachara(raw, target.id);
+      processAddedChar(target.id, p);
+    }).catch(handleErr);
+  } else if(target.type === 'charaeno') {
+    fetchCharaeno(target.edition, target.id).then(raw => {
+      const p = parseCharaeno(raw, target.id, target.edition);
+      processAddedChar(target.id, p);
+    }).catch(handleErr);
+  }
+
+  function handleErr(err){
+    dbg(`❌ ${target.id}: ${err.message}`);
+    const i=App.roster.findIndex(c=>c.id===target.id);
+    if(i>-1)App.roster[i]={id:target.id,_s:'err',name:'読み込みエラー',job:err.message};
+    renderGrid();
+  }
+}
+
+// 共通の終了処理
+function processAddedChar(id, p) {
+  const i = App.roster.findIndex(c=>c.id===id);
+  if(i>-1) App.roster[i] = p;
+  renderGrid();
+  updateStartBtn();
 }
 
 function removeChar(id){
@@ -1015,18 +1205,24 @@ function renderGrid(){
     // 正常に読み込めた場合
 // renderGrid 内のカード生成部分（正常に読み込めた場合）を書き換え
   return `
-    <div class="char-card ok">
-      <button class="cc-del" onclick="removeChar('${c.id}')">✕</button>
-      <div class="cc-name">${c.name}</div>
-      <div class="cc-job">${c.job || '探索者'}</div>
-      <div class="cc-stats">
-        <div class="cc-stat"><div class="cc-stat-l">STR</div><div class="cc-stat-v">${c.STR}</div></div>
-        <div class="cc-stat"><div class="cc-stat-l">DEX</div><div class="cc-stat-v">${c.DEX}</div></div>
-        <div class="cc-stat"><div class="cc-stat-l">CON</div><div class="cc-stat-v">${c.CON}</div></div>
-        <div class="cc-stat"><div class="cc-stat-l">POW</div><div class="cc-stat-v">${c.POW}</div></div>
-        <div class="cc-stat"><div class="cc-stat-l">HP</div><div class="cc-stat-v">${c.hpMax}</div></div>
-        <div class="cc-stat"><div class="cc-stat-l">SAN</div><div class="cc-stat-v">${c.sanMax}</div></div>
-      </div>
+  <div class="char-card ok">
+    <button class="cc-del" onclick="removeChar('${c.id}')">✕</button>
+    <div class="cc-name">
+      ${c.is7th 
+        ? '<span style="color:var(--purple2); font-size:10px; margin-right:4px;">[7th]</span>' 
+        : '<span style="color:var(--blue2); font-size:10px; margin-right:4px;">[6th]</span>'
+      }
+      ${c.name}
+    </div>
+    <div class="cc-job">${c.job || '探索者'}</div>
+    <div class="cc-stats">
+      <div class="cc-stat"><div class="cc-stat-l">STR</div><div class="cc-stat-v">${c.STR}</div></div>
+      <div class="cc-stat"><div class="cc-stat-l">DEX</div><div class="cc-stat-v">${c.DEX}</div></div>
+      <div class="cc-stat"><div class="cc-stat-l">CON</div><div class="cc-stat-v">${c.CON}</div></div>
+      <div class="cc-stat"><div class="cc-stat-l">POW</div><div class="cc-stat-v">${c.POW}</div></div>
+      <div class="cc-stat"><div class="cc-stat-l">HP</div><div class="cc-stat-v">${c.hpMax}</div></div>
+      <div class="cc-stat"><div class="cc-stat-l">SAN</div><div class="cc-stat-v">${c.san}</div></div>
+    </div>
       
       <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1);">
         <div style="font-size: 10px; color: var(--text3); display: flex; justify-content: space-between; margin-bottom: 2px;">
@@ -1704,19 +1900,23 @@ function showChamp(c){
   if(nsb) nsb.style.display = 'none';
 }
 
-function fpHTML(c,side){
-  const isR=side==='right';
-  const bars=[
-    ['HP',Math.max(0,c.hp),c.hpMax,'hp'],
-    ['MP',c.mp,c.mpMax,'mp'],
-    ['SAN',c.san,c.sanMax,'san'],
-  ].map(([l,cur,max,cls])=>`
+function fpHTML(c, side){
+// 7版なら紫の[7th]、そうでなければ青の[6th]を表示
+  const editionLabel = c.is7th 
+    ? `<span style="color:var(--purple2); font-size:10px; vertical-align:middle; opacity:0.8;">[7th] </span>` 
+    : `<span style="color:var(--blue2); font-size:10px; vertical-align:middle; opacity:0.8;">[6th] </span>`;
+
+  const bars = [
+    ['HP', Math.max(0, c.hp), c.hpMax, 'hp'],
+    ['SAN', c.san, c.sanMax, 'san'],
+  ].map(([l, cur, max, cls]) => `
     <div class="fp-bar-row">
       <div class="fp-bar-label">${l}</div>
-      <div class="fp-bar-track"><div class="fp-bar-fill ${cls}" style="width:${pct(cur,max)}%"></div></div>
+      <div class="fp-bar-track"><div class="fp-bar-fill ${cls}" style="width:${pct(cur, max)}%"></div></div>
       <div class="fp-bar-val">${cur}/${max}</div>
     </div>`).join('');
-  return`<div class="fp-name">${c.name}</div><div class="fp-job">${c.job||'探索者'}</div>${bars}`;
+    
+  return `<div class="fp-name">${editionLabel}${c.name}</div><div class="fp-job">${c.job || '探索者'}</div>${bars}`;
 }
 
 function pct(c,m){return m?Math.max(0,Math.min(100,Math.round(c/m*100))):0;}
@@ -1760,22 +1960,6 @@ function updCnt(){
   document.getElementById('cA').textContent = B.stats.attacks;
   document.getElementById('cD').textContent = B.stats.dmg;
   document.getElementById('cS').textContent = B.stats.sanLost;
-}
-
-// 内部で使用するHTML生成関数
-function fpHTML(c, side){
-  const bars = [
-    ['HP', Math.max(0, c.hp), c.hpMax, 'hp'],
-    ['MP', c.mp, c.mpMax, 'mp'],
-    ['SAN', c.san, c.sanMax, 'san'],
-  ].map(([l, cur, max, cls]) => `
-    <div class="fp-bar-row">
-      <div class="fp-bar-label">${l}</div>
-      <div class="fp-bar-track"><div class="fp-bar-fill ${cls}" style="width:${pct(cur, max)}%"></div></div>
-      <div class="fp-bar-val">${cur}/${max}</div>
-    </div>`).join('');
-    
-  return `<div class="fp-name">${c.name}</div><div class="fp-job">${c.job || '探索者'}</div>${bars}`;
 }
 
 function pct(c, m){ return m ? Math.max(0, Math.min(100, Math.round(c / m * 100))) : 0; }
