@@ -903,91 +903,74 @@ function parseChar(raw, id) {
   
   let weaponList = [];
 
-  // --- 1. 武器・防具欄 (arms_name) をスキャン ---
+  // --- 1. 武器・防具欄 (arms_name) をスキャン（ダメージ記載があるものを最優先） ---
   const armNames = raw['arms_name'] || [];
   const armHits = raw['arms_hit'] || [];
   const armDmgs = raw['arms_damage'] || [];
 
   for (let i = 0; i < armNames.length; i++) {
     const name = String(armNames[i] || '').trim();
-    if (!name || ['回避', '母国語'].includes(name)) continue;
-
+    if (!name || name === '回避') continue;
     const hitVal = parseInt(armHits[i]) || 0;
     const dmgVal = String(armDmgs[i] || '').trim();
     
-    // 武器欄に名前があり、かつダメージ表記がある場合はこれを登録
     if (dmgVal && dmgVal !== '0' && dmgVal !== '-') {
       weaponList.push({
         name: name,
         hit: hitVal,
         rawHit: hitVal,
         dmg: dmgVal,
-        u: (name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/) || false)
+        hasDB: dmgVal.toUpperCase().includes('DB') || name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/)
       });
     }
   }
 
-  // --- 2. 技能配列 (TBAP) から不足分を補完 ---
-  const vals = raw['TBAP'] || [];
-  const mapping = [
-    {idx: 1, name: 'キック', dmg: '1d6'},
-    {idx: 2, name: '組み付き', dmg: '1d3'},
-    {idx: 3, name: 'こぶし', dmg: '1d3'},
-    {idx: 4, name: '頭突き', dmg: '1d4'},
-    {idx: 7, name: '拳銃', dmg: '1d10'},
-    {idx: 8, name: 'サブマシンガン', dmg: '1d10'},
-    {idx: 9, name: 'ショットガン', dmg: '4d6'},
-    {idx: 10, name: 'マシンガン', dmg: '2d6'},
-    {idx: 11, name: 'ライフル', dmg: '2d6'}
+  // --- 2. 技能配列 (TBAP) から「正当な戦闘技能」のみを補完 ---
+  const vals = raw['TBAP'] || raw['TBP_V'] || [];
+  const skVals = raw['SKP_V'] || raw['SKAP'] || [];
+  
+  // 抽出対象とする技能の定義（インデックスとデフォルトダメージ）
+  const meleeMapping = [
+    {idx: 3, name: is7th ? '近接戦闘（格闘）' : 'こぶし', dmg: '1d3', isMelee: true},
+    {idx: 1, name: 'キック', dmg: '1d6', isMelee: true},
+    {idx: 2, name: '組み付き', dmg: '1d3', isMelee: true},
+    {idx: 4, name: '頭突き', dmg: '1d4', isMelee: true}
+  ];
+  const fireMapping = [
+    {idx: 7, name: '拳銃', dmg: '1d10', isMelee: false},
+    {idx: 8, name: 'サブマシンガン', dmg: '1d10', isMelee: false},
+    {idx: 9, name: 'ショットガン', dmg: '4d6', isMelee: false},
+    {idx: 11, name: 'ライフル', dmg: '2d6', isMelee: false}
   ];
 
-  mapping.forEach(m => {
-    // すでに武器欄から「同じ名前の武器」を拾っている場合は、技能欄からの自動追加をスキップ
-    if (weaponList.some(w => w.name.includes(m.name))) return;
-
+  // 格闘技能の走査
+  meleeMapping.forEach(m => {
     const hitVal = parseInt(vals[m.idx]) || 0;
-    if (hitVal > 0) {
-      weaponList.push({
-        name: m.name,
-        hit: hitVal,
-        rawHit: hitVal,
-        dmg: m.dmg,
-        u: m.idx <= 4
-      });
+    if (hitVal > 0 && !weaponList.some(w => w.name.includes(m.name))) {
+      weaponList.push({ name: m.name, hit: hitVal, rawHit: hitVal, dmg: m.dmg, hasDB: true });
     }
   });
 
-  // --- 3. ソート（最強の武器を一番上に） ---
+  // 射撃技能の走査
+  fireMapping.forEach(m => {
+    const hitVal = parseInt(skVals[m.idx] || vals[m.idx]) || 0;
+    if (hitVal > 0 && !weaponList.some(w => w.name.includes(m.name))) {
+      weaponList.push({ name: m.name, hit: hitVal, rawHit: hitVal, dmg: m.dmg, hasDB: false });
+    }
+  });
+
+  // --- 3. ソート（最強の「戦闘技能」を一番上に） ---
   weaponList.sort((a, b) => b.rawHit - a.rawHit);
 
-  // --- 4. ダメージ補完と7版補正 ---
+  // 補正の適用
   weaponList.forEach(w => {
-    // 格闘系（DBが乗るもの）の判定
-    w.u = (w.name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/) || false);
-    
-    // ★重要：DBを乗せるかどうかの判定フラグ
-    // すでにダメージ欄にDBと書いてあるか、格闘系技能なら true
-    w.hasDB = w.dmg.toUpperCase().includes('DB') || w.u;
-
     if (is7th) w.hit = Math.round(w.rawHit * 0.8);
-    else w.hit = w.rawHit;
-
-    if (!w.dmg || w.dmg === '0' || w.dmg === '-' || w.dmg === '') {
-      if (w.name.includes('拳銃') || w.name.includes('ハンドガン')) {
-        w.dmg = '1d10';
-        w.hasDB = false; // 拳銃はDBなし
-      } else if (w.name.includes('キック')) {
-        w.dmg = '1d6';
-        w.hasDB = true;
-      } else {
-        w.dmg = '1d3';
-        w.hasDB = true;
-      }
-    }
   });
 
+  // 最終防衛線：何もなければ標準の「こぶし」
   if (weaponList.length === 0) {
-    weaponList.push({ name: 'こぶし', hit: is7th ? 20 : 50, dmg: '1d3', u: true });
+    const baseHit = is7th ? 25 : 50;
+    weaponList.push({ name: is7th ? '近接戦闘（格闘）' : 'こぶし', hit: baseHit, rawHit: baseHit, dmg: '1d3', hasDB: true });
   }
 
   return {
@@ -1031,7 +1014,7 @@ function parseCharaeno(json, id, edition) {
   const a = json.attribute || {};
   const is7th = (edition === '7th'); 
 
-  // 能力値の計算
+  // ★能力値：7版なら5分の1、6版ならそのまま
   const STR = is7th ? Math.floor((c.str || 0) / 5) : (c.str || 0);
   const CON = is7th ? Math.floor((c.con || 0) / 5) : (c.con || 0);
   const POW = is7th ? Math.floor((c.pow || 0) / 5) : (c.pow || 0);
@@ -1039,13 +1022,8 @@ function parseCharaeno(json, id, edition) {
   const SIZ = is7th ? Math.floor((c.siz || 0) / 5) : (c.siz || 0);
   
   const hpMax = a.hp || Math.max(1, Math.floor((CON + SIZ) / 2));
+  let sanCur = (a.san?.value !== undefined) ? parseInt(a.san.value, 10) : POW * 5;
   
-  let sanCur = (json.attribute?.san?.value !== undefined) 
-               ? parseInt(json.attribute.san.value, 10) 
-               : POW * 5;
-  const sanMax = json.attribute?.san?.max ? parseInt(json.attribute.san.max, 10) : 99;
-  
-  // DBの取得（シートの値を優先）
   const dbData = parseDBString(a.db || '', STR, SIZ);
 
   const sm = {};
@@ -1054,35 +1032,62 @@ function parseCharaeno(json, id, edition) {
   }
 
   const weapons = [];
+
+  // 1. 武器欄からの取得
   if (Array.isArray(json.weapons)) {
     json.weapons.forEach(w => {
       const nm = (w.name || '').trim();
       if (!nm) return;
       let hit = parseInt(w.value) || sm[nm] || 0;
-      if (is7th) hit = Math.floor(hit * 0.8);
-      weapons.push({ name: nm, hit: hit, dmg: w.damage || '1d6', u: false });
+      weapons.push({ 
+        name: nm, 
+        hit: hit, // 技能値はそのまま
+        rawHit: hit, 
+        dmg: w.damage || '1d6', 
+        hasDB: (w.damage || '').toUpperCase().includes('DB') || nm.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ピッケル|斧|ナイフ/)
+      });
     });
   }
 
+  // 2. 技能欄からの取得（ピッケル等）
+  if (Array.isArray(json.skills)) {
+    json.skills.forEach(s => {
+      const nm = s.name || '';
+      if (weapons.some(w => w.name === nm)) return;
+
+      if (nm.match(/ピッケル|斧|日本刀|ナイフ|杖|近接戦闘|射撃/)) {
+        let dmg = '1d6';
+        if (nm.includes('ピッケル') || nm.includes('斧')) dmg = '1d6+1';
+        
+        weapons.push({
+          name: nm,
+          hit: s.value, // 技能値はそのまま
+          rawHit: s.value,
+          dmg: dmg,
+          hasDB: !nm.match(/射撃|拳銃|ライフル/)
+        });
+      }
+    });
+  }
+
+  // 最強技能をソート
+  weapons.sort((a, b) => b.rawHit - a.rawHit);
+
   if (weapons.length === 0) {
     const brawl = is7th ? (sm['近接戦闘（格闘）'] || 25) : (sm['こぶし'] || 50);
-    weapons.push({ name: '素手', hit: brawl, dmg: '1d3', u: true });
+    weaponList.push({ name: is7th ? '近接戦闘（格闘）' : 'こぶし', hit: brawl, rawHit: brawl, dmg: '1d3', hasDB: true });
   }
 
   return {
     id, _s: 'ok',
-    name: json.name || (sv ? sv('pc_name') : `探索者#${id}`),
-    job: json.occupation || (sv ? sv('shokugyou') : '探索者'),
-    is7th: is7th, // 7版ならtrue
-    STR: STR,
-    CON: CON,
-    POW: POW,
-    DEX: DEX,
-    SIZ: SIZ,
-    hpMax, hp: hpMax, sanMax, san: sanCur,
+    name: json.name || `探索者#${id}`,
+    job: json.occupation || '探索者',
+    is7th, STR, CON, POW, DEX, SIZ,
+    hpMax, hp: hpMax, sanMax: 99, san: sanCur,
     db: { l: dbData.l, fixed: dbData.r() },
     weapons,
-    dodge: is7th ? Math.floor((sm['回避'] || (DEX * 5)) / 5) : (sm['回避'] || (DEX * 2)),
+    // 回避も1/5にせず元の値を保持
+    dodge: sm['回避'] || (is7th ? (c.dex || 50) : (DEX * 2)), 
     stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0 }
   };
 }
@@ -1141,26 +1146,37 @@ function parseJSON(json) {
 
   weaponMatches.forEach(m => {
     const name = m[2];
-    const exclude = ['回避', 'アイデア', '幸運', '知識', '目星', '聞き耳', '図書館', '正気度ロール', 'STR', 'CON', 'POW', 'DEX', 'APP', 'SIZ', 'INT', 'EDU'];
-    if (exclude.includes(name)) return;
     
+    // 戦闘技能のホワイトリスト
+    const isCombatSkill = name.match(/こぶし|パンチ|キック|頭突き|組み付き|ナイフ|剣|日本刀|杖|棍棒|拳銃|ハンドガン|サブマシンガン|ショットガン|ライフル|マシンガン|近接戦闘|射撃|格闘/);
+    if (!isCombatSkill) return;
+
     let hit = parseInt(m[1]);
-    const rawHit = hit; // 並び替え用に元の値を保持
+    const rawHit = hit;
     if (is7th) hit = Math.floor(hit * 0.8);
 
     let dmg = '1d3'; 
-    if (name.includes('フェンシング') || name.includes('ナイフ')) dmg = '1d6';
+    if (name.includes('ナイフ')) dmg = '1d4';
     else if (name.includes('キック')) dmg = '1d6';
     else if (name.includes('拳銃') || name.includes('ハンドガン')) dmg = '1d10';
     
-    weapons.push({ name: name, hit: hit, rawHit: rawHit, dmg: dmg, u: false });
+    // ★重要：ナイフをDB加算対象（u: trueと同じ扱い）に含める
+    const isMelee = name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ナイフ|剣|日本刀|杖|棍棒/);
+
+    weapons.push({ 
+      name: name, 
+      hit: hit, 
+      rawHit: rawHit, 
+      dmg: dmg, 
+      u: !!isMelee,
+      hasDB: !!isMelee // DB対象フラグをセット
+    });
   });
 
-  // ★重要：技能値が高い順に並び替える
   weapons.sort((a, b) => b.rawHit - a.rawHit);
 
   if (weapons.length === 0) {
-    weapons.push({ name: '素手', hit: is7th ? 20 : 50, dmg: '1d3', u: true });
+    weapons.push({ name: '素手', hit: is7th ? 20 : 50, dmg: '1d3', u: true, hasDB: true });
   }
 
   const id = 'json-' + Date.now() + Math.random().toString(36).slice(2, 5);
@@ -1185,7 +1201,6 @@ function addFromInput(){
   const raw = inputEl.value.trim();
   if(!raw) return;
 
-  // ★重要：スペースで分割せず、改行（\n）のみで分割する
   const lines = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
 
   lines.forEach(line => {
@@ -1194,8 +1209,16 @@ function addFromInput(){
       try {
         const json = JSON.parse(line);
         if (json.kind === "character" || json.data) {
-          const p = parseJSON(json);
-          App.roster.push(p);
+          // ★修正：一時的にパースして中身を確認
+          const tempChar = parseJSON(json);
+          
+          // ★重複チェック：同名かつ同ステータスのキャラがいないか確認
+          if (App.roster.some(c => c.name === tempChar.name && c.STR === tempChar.STR)) {
+            dbg(`⚠ 重複のためスキップ: ${tempChar.name}`);
+            return;
+          }
+          
+          App.roster.push(tempChar);
           return;
         }
       } catch (e) {
@@ -1607,31 +1630,29 @@ function hitGrade(roll, skill) {
   return 'success';
 }
 
-function doAttack(att,def,as,ds){
-  const logs=[];
-  const rw=att.weapons.filter(w=>!w.u);
-  const pool=rw.length?rw:att.weapons;
-  const w=pool.reduce((b,x)=>x.hit>b.hit?x:b,pool[0]);
-  if(!w)return logs;
+function doAttack(att, def, as, ds) {
+  const logs = [];
+  const rw = att.weapons.filter(w => !w.u);
+  const pool = rw.length ? rw : att.weapons;
+  // 現在使用している武器を取得
+  const w = pool.reduce((b, x) => x.hit > b.hit ? x : b, pool[0]);
+  if (!w) return logs;
 
-  const ar=d100(),gr=hitGrade(ar,w.hit);
-
-  // 攻撃を試みた回数を加算
+  const ar = d100(), gr = hitGrade(ar, w.hit);
   att.stats.attacks++;
 
-  if(gr==='fumble'){
-    logs.push({cls:`log-attack-${as}`,h:`<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}]</span> → <span class="t-miss">💨 ファンブル！よろけた…</span>`});
+  if (gr === 'fumble') {
+    logs.push({ cls: `log-attack-${as}`, h: `<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}]</span> → <span class="t-miss">💨 ファンブル！よろけた…</span>` });
     return logs;
   }
-  if(gr==='miss'){
-    logs.push({cls:`log-attack-${as}`,h:`<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="t-miss">外れた</span>`});
+  if (gr === 'miss') {
+    logs.push({ cls: `log-attack-${as}`, h: `<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="t-miss">外れた</span>` });
     return logs;
   }
 
-  // クリティカル、スペシャル、通常成功のすべてのパターンに出目を追加
   const gt = gr === 'critical' ? `<span class="t-crit">💥 クリティカル！！</span> <span class="t-roll">[${ar}/${w.hit}%]</span>`
     : gr === 'special' ? `<span style="color:#ffaa44">⭐ スペシャル</span> <span class="t-roll">[${ar}/${w.hit}%]</span>`
-    : `<span class="t-roll">[${ar}/${w.hit}%]</span>`; // 通常成功時
+    : `<span class="t-roll">[${ar}/${w.hit}%]</span>`;
 
   if (gr !== 'critical') {
     const dr = d100();
@@ -1646,8 +1667,15 @@ function doAttack(att,def,as,ds){
 
   const dr2 = rollDmg(w.dmg);
   
-  // ★重要：武器の hasDB フラグが true の場合のみ、DBを合算する
-  const dbv = w.hasDB ? (att.db.fixed || 0) : 0; 
+  // ★重要：DBを加算するかどうかの判定をここで再実行する（最も確実な方法）
+  // 1. 武器データに hasDB が true で設定されているか
+  // 2. ダメージ文字列に "DB" が含まれているか（大文字小文字無視）
+  // 3. 武器名が近接武器（ピッケル、ナイフ、こぶし等）であるか
+  const isMelee = w.hasDB || 
+                  (w.dmg && w.dmg.toUpperCase().includes('DB')) || 
+                  (w.name && w.name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ピッケル|斧|ナイフ|剣|日本刀|杖|棍棒/));
+
+  const dbv = isMelee ? (att.db.fixed || 0) : 0; 
   
   let tot = Math.max(1, dr2.t + dbv);
 
@@ -1656,11 +1684,10 @@ function doAttack(att,def,as,ds){
   
   const ph = def.hp;
   def.hp = clamp(def.hp - tot, 0, def.hpMax);
-
   att.stats.dmgDealt += tot;
   
-  // ログ表示もDBが乗った場合のみ表示するよう調整
-  const dbn = (w.hasDB && dbv !== 0) ? ` <span class="t-roll">(DB${dbv >= 0 ? '+' : ''}${dbv})</span>` : '';
+  // ログのDB表記
+  const dbn = (isMelee && dbv !== 0) ? ` <span class="t-roll">(DB${dbv >= 0 ? '+' : ''}${dbv})</span>` : '';
   const mn = gr === 'special' ? ' <span class="t-roll">×1.5</span>' : gr === 'critical' ? ' <span class="t-roll">×2</span>' : '';
 
   logs.push({
