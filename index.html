@@ -1729,14 +1729,12 @@ function doAttack(att, def, as, ds) {
   if (gr !== 'critical') {
     const dr = d100();
     if (dr <= def.dodge) {
-      // 回避成功時：ここで関数を終了（ダメージ計算へ行かない）
       logs.push({ 
         cls: `log-attack-${as}`, 
         h: `<span class="cn-${as}">${att.name}</span>の攻撃 <span class="t-roll">[${ar} / ${w.hit}]</span> → <span class="cn-${ds}">${def.name}</span>の回避判定 <span class="t-roll">[${dr} / ${def.dodge}]</span> → <span class="t-evade"> 🛡 成功！</span>` 
       });
       return logs;
     } else {
-      // 回避失敗時：ログ用の文字列だけ作っておき、後のダメージログと合流させる
       evadeLog = ` → <span class="cn-${ds}">${def.name}</span>の回避判定 <span class="t-roll">[${dr} / ${def.dodge}]</span> → <span class="t-miss">失敗</span>`;
     }
   }
@@ -1746,32 +1744,38 @@ function doAttack(att, def, as, ds) {
   let dbv = 0;
   let dbLabel = "";
 
+  // ★修正：固定値(att.db.fixed)を使わず、その場でダイスを振り直す
+  const currentDB = parseDBString(att.db.l, att.STR, att.SIZ); // 元のDB式から振り直し
+
   if (w.dbMode === 'full') {
-    dbv = att.db.fixed || 0;
+    dbv = currentDB.r(); // ここで新しくダイスを振る
     dbLabel = `(DB${dbv>=0?'+':''}${dbv})`;
   } else if (w.dbMode === 'half') {
-    dbv = Math.floor((att.db.fixed || 0) / 2);
+    dbv = Math.floor(currentDB.r() / 2); // 半分の場合も振り直し
     dbLabel = `(1/2DB${dbv>=0?'+':''}${dbv})`;
   }
 
   let tot = Math.max(1, dr2.t + dbv);
   let critLabel = "";
+  
+  // ★重要：ご要望に合わせてラベルを詳細化
   if (gr === 'special') { 
     tot = Math.ceil(tot * 1.5); 
-    critLabel = " <span class='t-crit'>[スペシャル]</span>"; 
+    critLabel = " <span class='t-crit'>[スペシャル]（ダメージ1.5倍）</span>"; 
   }
   if (gr === 'critical') { 
     tot = tot * 2; 
-    critLabel = " <span class='t-crit'>[クリティカル]</span>"; 
+    critLabel = " <span class='t-crit'>[クリティカル]（回避不可、ダメージ2倍）</span>"; 
   }
   
   def.hp = clamp(def.hp - tot, 0, def.hpMax);
   att.stats.dmgDealt += tot;
 
-  // ★重要：攻撃＋回避失敗＋ダメージ結果を一行にまとめる
+  // 2行構成のログ出力
   logs.push({
     cls: `log-attack-${as}`,
-    h: `<span class="cn-${as}">${att.name}</span>の攻撃 <span class="t-roll">[${ar} / ${w.hit}]</span>${evadeLog}${critLabel} → <span class="t-hit">ヒット！</span> <span class="t-dmg">-${tot}</span> <span class="t-roll">${dbLabel}</span> ／ <span class="cn-${ds}">${def.name}</span> HP <b>${def.hp}</b>`
+    h: `<span class="cn-${as}">${att.name}</span>の攻撃 <span class="t-roll">[${ar} / ${w.hit}]</span>${evadeLog}${critLabel}<br>` +
+       `<span style="display:inline-block; padding-left:1.5em;">➔ <span class="t-hit">ヒット！</span> <span class="t-dmg">-${tot}</span> <span class="t-roll">${dbLabel}</span> ／ <span class="cn-${ds}">${def.name}</span> HP <b>${def.hp}</b></span>`
   });
   return logs;
 }
