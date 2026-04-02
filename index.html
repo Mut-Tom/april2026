@@ -648,20 +648,25 @@ footer a:hover {
       <span style="font-size: 10px; opacity: 0.7; font-weight: 400; margin-left: 4px;">(保管所 / Charaeno / 各種JSONデータ 対応)</span>
     </div>
     <div class="add-row" style="flex-direction: column; gap: 10px;">
-      <p class="hint" style="margin-top: 8px; color: var(--text2); font-size: 12px; line-height: 1.6;">
-        💡 <strong>URLやJSONを1行ずつ貼り付けてください。</strong><br>
-        【いあきゃら】の場合：「出力」→「ココフォリア駒出力」を選んでコピーした値をそのまま貼り付ければOKです。
-      </p>
       <textarea class="url-inp" id="urlInput" 
-              style="min-height: 120px; resize: vertical;"
-              placeholder="https://charasheet.vampire-blood.net/xxxxxx&#13;&#10;https://charaeno.com/6th/xxxxxx&#13;&#10;{&quot;kind&quot;:&quot;character&quot;,&quot;data&quot;:{&quot;name&quot;:&quot;...&quot;}}"></textarea>
+                style="min-height: 120px; resize: vertical;"
+                placeholder="https://charasheet.vampire-blood.net/xxxxxx&#13;&#10;https://charaeno.com/6th/xxxxxx&#13;&#10;{&quot;kind&quot;:&quot;character&quot;,&quot;data&quot;:{&quot;name&quot;:&quot;...&quot;}}"></textarea>
       <button class="btn-add" onclick="addFromInput()" style="width: 100%; padding: 14px;">＋ 探索者を一括追加</button>
     </div>
     <p class="hint">
       複数URLはスペース・改行区切りで一括入力可
     </p>
     <div class="char-grid" id="charGrid">
-      <div class="empty-hint" id="emptyHint">URLを入力して探索者を追加してください</div>
+      <div class="empty-hint" id="emptyHint" style="padding: 40px 20px; display: flex; justify-content: center;">
+        <div style="text-align: left; max-width: 400px; line-height: 1.8;">
+          <div style="font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>💡</span> <span>URLやJSONを1行ずつ貼り付けてください</span>
+          </div>
+          <div style="font-size: 12px; opacity: 0.8; color: var(--text3); padding-left: 28px;">
+            【いあきゃら】の場合：「出力」→「ココフォリア駒出力」を選んでコピーした値をそのまま貼り付ければOKです。
+          </div>
+        </div>
+      </div>
     </div>
     <div class="dbg" id="dbgBox"></div>
   </div>
@@ -1360,9 +1365,18 @@ function renderGrid(){
 
   // 探索者が一人もいない場合、ヒントを表示して終了
   if(App.roster.length === 0){
-    grid.innerHTML = '<div class="empty-hint" id="emptyHint">👆 URLを入力して探索者を追加してください</div>';
-    return;
-  }
+      grid.innerHTML = `
+        <div class="empty-hint" id="emptyHint" style="line-height: 1.8; padding: 30px;">
+          <div style="font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 10px;">
+            💡 URLやJSONを1行ずつ貼り付けてください
+          </div>
+          <div style="font-size: 12px; opacity: 0.8;">
+            【いあきゃら】の場合：「出力」→「ココフォリア駒出力」を<br>
+            選んでコピーした値をそのまま貼り付ければOKです。
+          </div>
+        </div>`;
+      return;
+    }
 
   // キャラクターカードの生成
   grid.innerHTML = App.roster.map(c => {
@@ -1543,7 +1557,17 @@ function resetAll(){
   }
 
   // 入力欄とリストの初期化
-  document.getElementById('charGrid').innerHTML = '<div class="empty-hint" id="emptyHint">👆 URLを入力して探索者を追加してください</div>';
+  document.getElementById('charGrid').innerHTML = `
+    <div class="empty-hint" id="emptyHint" style="padding: 40px 20px; display: flex; justify-content: center;">
+      <div style="text-align: left; max-width: 400px; line-height: 1.8;">
+        <div style="font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <span>💡</span> <span>URLやJSONを1行ずつ貼り付けてください</span>
+        </div>
+        <div style="font-size: 12px; opacity: 0.8; color: var(--text3); padding-left: 28px;">
+          【いあきゃら】の場合：「出力」→「ココフォリア駒出力」を選んでコピーした値をそのまま貼り付ければOKです。
+        </div>
+      </div>
+    </div>`;
   document.getElementById('modePanel').style.display = 'none';
   
   updateStartBtn();
