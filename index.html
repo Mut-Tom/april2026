@@ -1575,12 +1575,17 @@ function resetAll(){
 
 // ══ TOURNAMENT ═══════════════════════════════════
 function buildTournament(chars){
-  const sh=shuffle([...chars]);const ms=[];
-  for(let i=0;i<sh.length-1;i+=2)
-    ms.push({id:ms.length,l:cp(sh[i]),r:cp(sh[i+1]),winner:null,loser:null,isBye:false,round:1});
+  const sh = shuffle([...chars]);
+  const ms = [];
+  // 現在のタイムスタンプなどを使って、絶対に被らないIDを作る
+  const baseId = Date.now(); 
+
+  for(let i=0; i<sh.length-1; i+=2)
+    ms.push({id: `m-${baseId}-${ms.length}`, l:cp(sh[i]), r:cp(sh[i+1]), winner:null, loser:null, isBye:false, round:1});
+    
   if(sh.length%2===1){
-    const bye=cp(sh[sh.length-1]);
-    ms.push({id:ms.length,l:bye,r:null,winner:bye,loser:null,isBye:true,round:1});
+    const bye = cp(sh[sh.length-1]);
+    ms.push({id: `m-${baseId}-${ms.length}`, l:bye, r:null, winner:bye, loser:null, isBye:true, round:1});
   }
   return ms;
 }
@@ -1912,12 +1917,17 @@ function finishMatch(winner, loser, ws) {
   B.over = true; B.running = false; clearTimeout(B.timer);
   addLog({cls:'log-result', h:`🏅 <span class="cn-${ws}">${winner.name}</span> の勝利！`});
 
-  // 勝者の名簿データを特定して試合数をカウント
+  // ★重要：まず真っ先に現在のログを保存する
+  const m = App.matches[App.matchIdx];
+  App.historyLogs[m.id] = document.getElementById('battleLog').innerHTML;
+
+  // 勝者の名簿データを特定
   const originalWinner = App.roster.find(c => c.id === winner.id);
   if (originalWinner) {
-    originalWinner.stats.matchCount = (originalWinner.stats.matchCount || 0) + 1; // ★ここを追加
+    originalWinner.stats.matchCount = (originalWinner.stats.matchCount || 0) + 1;
   }
 
+  // 統計の同期
   [B.L, B.R].forEach(side => {
     const original = App.roster.find(r => r.id === side.id);
     if (original) {
@@ -1929,37 +1939,22 @@ function finishMatch(winner, loser, ws) {
   });
 
   const originalLoser = App.roster.find(c => c.id === loser.id);
-
-  const m = App.matches[App.matchIdx];
   m.round_count = B.round; 
-  if(originalWinner) {
-    m.winner = cp(originalWinner);
-    restoreFunc(m.winner);
-  }
+  if(originalWinner) { m.winner = cp(originalWinner); restoreFunc(m.winner); }
   if(originalLoser) m.loser = cp(originalLoser);
   
   renderMatchQueue();
 
   const hasMore = hasNext();
-  // ★文言修正：「次のラウンド」ではなく「次の試合」に統一
   const nsb = document.getElementById('nextStepBtn');
   if(nsb) {
     const nextRndMatches = App.mode === 'tournament' ? buildNextRound(App.matches) : null;
     const isFinalChamp = App.mode === 'tournament' && !hasMore && (!nextRndMatches || nextRndMatches.length === 0);
-
     if (isFinalChamp) nsb.style.display = 'none';
-    else {
-      nsb.style.display = 'block';
-      nsb.textContent = '次の試合へ ▶'; // 常にこれで統一
-    }
+    else { nsb.style.display = 'block'; nsb.textContent = '次の試合へ ▶'; }
   }
 
-  App.historyLogs[m.id] = document.getElementById('battleLog').innerHTML;
-  renderMatchQueue();
-
-  setTimeout(() => {
-    showOv(originalWinner); 
-  }, 800);
+  setTimeout(() => { showOv(originalWinner); }, 800);
 }
 
 function showOv(winner){
@@ -2112,13 +2107,16 @@ function advRound(){
 function buildNextRoundForWinners(ws, rnd){
   const sh = shuffle([...ws]);
   const ms = [];
+  const baseId = Date.now(); // 新しいラウンド用に新しいベースIDを発行
+
   for(let i=0; i<sh.length-1; i+=2)
-    ms.push({id:ms.length, l:cp(sh[i]), r:cp(sh[i+1]), winner:null, loser:null, isBye:false, round:rnd});
+    ms.push({id: `m-${baseId}-${ms.length}`, l:cp(sh[i]), r:cp(sh[i+1]), winner:null, loser:null, isBye:false, round:rnd});
+    
   if(sh.length%2===1){
-    const bye=cp(sh[sh.length-1]);
-    ms.push({id:ms.length, l:bye, r:null, winner:bye, loser:null, isBye:true, round:rnd});
+    const bye = cp(sh[sh.length-1]);
+    ms.push({id: `m-${baseId}-${ms.length}`, l:bye, r:null, winner:bye, loser:null, isBye:true, round:rnd});
   }
-  // ここでコピーした後に、関数(db.r)を手動で復元するか、cp自体を修正する必要があります。
+  
   ms.forEach(m => {
     if(m.l) restoreFunc(m.l);
     if(m.r) restoreFunc(m.r);
