@@ -536,6 +536,70 @@ footer a:hover {
   opacity: 1 !important;
   color: var(--blue2) !important;
 }
+
+/* 武器編集用フォームのスタイル */
+.edit-weapon-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--blue2);
+  color: var(--text);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin: 2px 0;
+  outline: none;
+}
+
+.editable-zone {
+  cursor: pointer;
+  /* ホバー時のピカピカを削除 */
+  transition: opacity 0.2s;
+}
+
+.editable-zone:hover {
+  /* 軽く明るくなる程度の自然な変化に */
+  filter: brightness(1.1);
+}
+
+/* 武器エリアなどの個別ホバーも不要なので削除 */
+.editable-weapon:hover {
+  background: none;
+  cursor: pointer;
+}
+
+/* 入力中のスタイル */
+.inline-edit-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--blue2);
+  color: var(--yellow2);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: inherit;
+  text-align: center;
+  border-radius: 4px;
+  outline: none;
+}
+
+/* 編集モーダルのレイアウト調整 */
+.edit-modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh; /* 画面に収まる高さ */
+}
+
+#editModalBody {
+  flex: 1;
+  overflow-y: auto; /* 中身だけをスクロールさせる */
+  padding-right: 10px;
+  margin-bottom: 10px;
+}
+
+.edit-modal-footer {
+  flex-shrink: 0;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+  background: transparent;
+}
 </style>
 </head>
 <body>
@@ -911,14 +975,15 @@ function parseChar(raw, id) {
     if (!name || name === '回避') continue;
     const hitVal = parseInt(armHits[i]) || 0;
     const dmgVal = String(armDmgs[i] || '').trim();
-    
-    if (dmgVal && dmgVal !== '0' && dmgVal !== '-') {
+
+    if (hitVal > 0 && dmgVal && dmgVal !== '0' && dmgVal !== '-') {
       weaponList.push({
         name: name,
         hit: hitVal,
         rawHit: hitVal,
-        dmg: dmgVal,
-        hasDB: dmgVal.toUpperCase().includes('DB') || name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/)
+        dmg: dmgVal.replace(/\+?DB/gi, ''), // 基礎ダイスのみ保存
+        dbMode: dmgVal.toUpperCase().includes('DB') ? 'full' : 'none',
+        hasDB: dmgVal.toUpperCase().includes('DB') || !!name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/)
       });
     }
   }
@@ -1031,26 +1096,28 @@ function parseCharaeno(json, id, edition) {
 
   const weapons = [];
 
-  // 1. 武器欄からの取得
-  if (Array.isArray(json.weapons)) {
-    json.weapons.forEach(w => {
-      const nm = (w.name || '').trim();
-      if (!nm) return;
-      let hit = parseInt(w.value) || sm[nm] || 0;
-      weapons.push({ 
-        name: nm, 
-        hit: hit, // 技能値はそのまま
-        rawHit: hit, 
-        dmg: w.damage || '1d6', 
-        hasDB: (w.damage || '').toUpperCase().includes('DB') || nm.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ピッケル|斧|ナイフ/)
-      });
+  // parseCharaeno内の武器ループ部分
+  json.weapons.forEach(w => {
+    const nm = (w.name || '').trim();
+    if (!nm) return;
+    let hit = parseInt(w.value) || sm[nm] || 0;
+    if (hit <= 0) return;
+    const isDbWeapon = (w.damage || '').toUpperCase().includes('DB'); // 判定
+    
+    weapons.push({ 
+      name: nm, 
+      hit: hit, 
+      rawHit: hit, 
+      dmg: (w.damage || '1d6').replace(/\+?DB/gi, ''), // 基礎ダイスのみ
+      dbMode: isDbWeapon ? 'full' : 'none',
+      hasDB: isDbWeapon || !!nm.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ピッケル|斧|ナイフ/)
     });
-  }
+  });
 
-  // 2. 技能欄からの取得（ピッケル等）
   if (Array.isArray(json.skills)) {
     json.skills.forEach(s => {
       const nm = s.name || '';
+      if (s.value <= 0) return;
       if (weapons.some(w => w.name === nm)) return;
 
       if (nm.match(/ピッケル|斧|日本刀|ナイフ|杖|近接戦闘|射撃/)) {
@@ -1150,6 +1217,7 @@ function parseJSON(json) {
     if (!isCombatSkill) return;
 
     let hit = parseInt(m[1]);
+    if (hit <= 0) return;
     const rawHit = hit;
     if (is7th) hit = Math.floor(hit * 0.8);
 
@@ -1158,7 +1226,7 @@ function parseJSON(json) {
     else if (name.includes('キック')) dmg = '1d6';
     else if (name.includes('拳銃') || name.includes('ハンドガン')) dmg = '1d10';
     
-    // ★重要：ナイフをDB加算対象（u: trueと同じ扱い）に含める
+     // parseJSON内の武器追加部分
     const isMelee = name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ナイフ|剣|日本刀|杖|棍棒/);
 
     weapons.push({ 
@@ -1166,8 +1234,9 @@ function parseJSON(json) {
       hit: hit, 
       rawHit: rawHit, 
       dmg: dmg, 
+      dbMode: isMelee ? 'full' : 'none',
       u: !!isMelee,
-      hasDB: !!isMelee // DB対象フラグをセット
+      hasDB: !!isMelee 
     });
   });
 
@@ -1310,19 +1379,17 @@ function renderGrid(){
         <div class="cc-err-text">${c.job || '読み込み失敗'}</div>
       </div>`;
 
-    // 正常に読み込めた場合
-// renderGrid 内のカード生成部分（正常に読み込めた場合）を書き換え
+  // 正常に読み込めた場合
   return `
-  <div class="char-card ok">
-    <button class="cc-del" onclick="removeChar('${c.id}')">✕</button>
+  <div class="char-card ok editable-zone" onclick="openEditModal('${c.id}')" title="クリックして編集">
+    <button class="cc-del" onclick="event.stopPropagation(); removeChar('${c.id}')">✕</button>
+    
     <div class="cc-name">
-      ${c.is7th 
-        ? '<span style="color:var(--purple2); font-size:10px; margin-right:4px;">[7th]</span>' 
-        : '<span style="color:var(--blue2); font-size:10px; margin-right:4px;">[6th]</span>'
-      }
+      ${c.is7th ? '<span style="color:var(--purple2);font-size:10px;">[7th] </span>' : '<span style="color:var(--blue2);font-size:10px;">[6th] </span>'}
       ${c.name}
     </div>
     <div class="cc-job">${c.job || '探索者'}</div>
+    
     <div class="cc-stats">
       <div class="cc-stat"><div class="cc-stat-l">STR</div><div class="cc-stat-v">${c.STR}</div></div>
       <div class="cc-stat"><div class="cc-stat-l">DEX</div><div class="cc-stat-v">${c.DEX}</div></div>
@@ -1332,32 +1399,31 @@ function renderGrid(){
       <div class="cc-stat"><div class="cc-stat-l">SAN</div><div class="cc-stat-v">${c.san}</div></div>
     </div>
       
-      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1);">
-        <div style="font-size: 10px; color: var(--text3); display: flex; justify-content: space-between; margin-bottom: 2px;">
-          <span>MAIN WEAPON</span>
-          <span style="color: var(--yellow2)">DB: ${c.db.l}</span>
-        </div>
-        <div style="font-size: 11px; font-weight: 700; color: var(--blue3); display: flex; justify-content: space-between; align-items: center;">
-          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
-            ⚔️ ${c.weapons[0]?.name || '素手'}
-          </span>
-          <span style="font-family: 'Share Tech Mono', monospace; background: rgba(68,136,255,0.1); padding: 1px 6px; border-radius: 4px;">
-            ${(() => {
-              const baseDmg = c.weapons[0]?.dmg || '1d3';
-              // すでに DB という文字が含まれているかチェック
-              const hasDB = baseDmg.toUpperCase().includes('DB');
-              // 格闘系技能かどうかチェック
-              const isMelee = (c.weapons[0]?.name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/) || c.weapons[0]?.u);
-              
-              // 格闘系かつ、まだ DB 表記がない場合のみ +DB を付与
-              return baseDmg + (isMelee && !hasDB ? '+DB' : '');
-            })()}
-          </span>
-        </div>
+    <div style="margin-top: 8px; padding: 4px; border-top: 1px dashed rgba(255,255,255,0.1);">
+      <div style="font-size: 10px; color: var(--text3); display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span>MAIN WEAPON</span>
+        <span style="color: var(--yellow2)">DB: ${c.db.l}</span>
       </div>
-
-      <div class="cc-hp-bar"><div class="cc-hp-fill" style="width:100%"></div></div>
-    </div>`;
+      <div style="font-size: 11px; font-weight: 700; color: var(--blue3); display: flex; justify-content: space-between; align-items: center;">
+        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">⚔️ ${c.weapons[0]?.name || '素手'}</span>
+        <span style="font-family: 'Share Tech Mono', monospace; background: rgba(68,136,255,0.1); padding: 1px 6px; border-radius: 4px;">
+          ${(() => {
+            const w = c.weapons[0];
+            if (!w) return '1d3';
+            
+            // DB表示用のラベルを決定
+            let dbLabel = "";
+            if (w.dbMode === 'full') dbLabel = "+DB";
+            else if (w.dbMode === 'half') dbLabel = "+1/2DB";
+            
+            // 基礎ダメージ（w.dmgからDBという文字を除いたもの）にラベルを結合
+            return w.dmg.replace(/\+?DB/gi, '') + dbLabel;
+          })()}
+        </span>
+      </div>
+    </div>
+    <div class="cc-hp-bar"><div class="cc-hp-fill" style="width:100%"></div></div>
+  </div>`;
   }).join('');
 
   // 1v1ピッカーの更新
@@ -1641,67 +1707,71 @@ function hitGrade(roll, skill) {
 
 function doAttack(att, def, as, ds) {
   const logs = [];
-  const rw = att.weapons.filter(w => !w.u);
-  const pool = rw.length ? rw : att.weapons;
-  // 現在使用している武器を取得
-  const w = pool.reduce((b, x) => x.hit > b.hit ? x : b, pool[0]);
+  const w = att.weapons[0]; 
   if (!w) return logs;
 
-  const ar = d100(), gr = hitGrade(ar, w.hit);
+  const ar = d100();
+  const gr = hitGrade(ar, w.hit);
   att.stats.attacks++;
 
-  if (gr === 'fumble') {
-    logs.push({ cls: `log-attack-${as}`, h: `<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}]</span> → <span class="t-miss">💨 ファンブル！よろけた…</span>` });
-    return logs;
-  }
-  if (gr === 'miss') {
-    logs.push({ cls: `log-attack-${as}`, h: `<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 <span class="t-roll">[${ar}/${w.hit}%]</span> → <span class="t-miss">外れた</span>` });
+  // 1. 攻撃そのものが失敗した場合
+  if (gr === 'fumble' || gr === 'miss') {
+    const res = (gr === 'fumble') ? '💨 ファンブル！' : '失敗';
+    logs.push({ 
+      cls: `log-attack-${as}`, 
+      h: `<span class="cn-${as}">${att.name}</span>の「${w.name}」判定 <span class="t-roll">[${ar} / ${w.hit}]</span> → <span class="t-miss">${res}</span>` 
+    });
     return logs;
   }
 
-  const gt = gr === 'critical' ? `<span class="t-crit">💥 クリティカル！！</span> <span class="t-roll">[${ar}/${w.hit}%]</span>`
-    : gr === 'special' ? `<span style="color:#ffaa44">⭐ スペシャル</span> <span class="t-roll">[${ar}/${w.hit}%]</span>`
-    : `<span class="t-roll">[${ar}/${w.hit}%]</span>`;
-
+  // 2. 回避判定の処理
+  let evadeLog = "";
   if (gr !== 'critical') {
     const dr = d100();
     if (dr <= def.dodge) {
-      logs.push({
-        cls: `log-attack-${as}`,
-        h: `<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 ${gt} → <span class="cn-${ds}">${def.name}</span>が<span class="t-evade"> 🛡 回避！</span> <span class="t-roll">[${dr}/${def.dodge}%]</span>`
+      // 回避成功時：ここで関数を終了（ダメージ計算へ行かない）
+      logs.push({ 
+        cls: `log-attack-${as}`, 
+        h: `<span class="cn-${as}">${att.name}</span>の攻撃 <span class="t-roll">[${ar} / ${w.hit}]</span> → <span class="cn-${ds}">${def.name}</span>の回避判定 <span class="t-roll">[${dr} / ${def.dodge}]</span> → <span class="t-evade"> 🛡 成功！</span>` 
       });
       return logs;
+    } else {
+      // 回避失敗時：ログ用の文字列だけ作っておき、後のダメージログと合流させる
+      evadeLog = ` → <span class="cn-${ds}">${def.name}</span>の回避判定 <span class="t-roll">[${dr} / ${def.dodge}]</span> → <span class="t-miss">失敗</span>`;
     }
   }
 
+  // 3. ダメージ計算
   const dr2 = rollDmg(w.dmg);
-  
-  // ★重要：DBを加算するかどうかの判定をここで再実行する（最も確実な方法）
-  // 1. 武器データに hasDB が true で設定されているか
-  // 2. ダメージ文字列に "DB" が含まれているか（大文字小文字無視）
-  // 3. 武器名が近接武器（ピッケル、ナイフ、こぶし等）であるか
-  const isMelee = w.hasDB || 
-                  (w.dmg && w.dmg.toUpperCase().includes('DB')) || 
-                  (w.name && w.name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ピッケル|斧|ナイフ|剣|日本刀|杖|棍棒/));
+  let dbv = 0;
+  let dbLabel = "";
 
-  const dbv = isMelee ? (att.db.fixed || 0) : 0; 
-  
+  if (w.dbMode === 'full') {
+    dbv = att.db.fixed || 0;
+    dbLabel = `(DB${dbv>=0?'+':''}${dbv})`;
+  } else if (w.dbMode === 'half') {
+    dbv = Math.floor((att.db.fixed || 0) / 2);
+    dbLabel = `(1/2DB${dbv>=0?'+':''}${dbv})`;
+  }
+
   let tot = Math.max(1, dr2.t + dbv);
-
-  if (gr === 'special') tot = Math.max(1, Math.ceil(tot * 1.5));
-  if (gr === 'critical') tot = Math.max(1, tot * 2);
+  let critLabel = "";
+  if (gr === 'special') { 
+    tot = Math.ceil(tot * 1.5); 
+    critLabel = " <span class='t-crit'>[スペシャル]</span>"; 
+  }
+  if (gr === 'critical') { 
+    tot = tot * 2; 
+    critLabel = " <span class='t-crit'>[クリティカル]</span>"; 
+  }
   
-  const ph = def.hp;
   def.hp = clamp(def.hp - tot, 0, def.hpMax);
   att.stats.dmgDealt += tot;
-  
-  // ログのDB表記
-  const dbn = (isMelee && dbv !== 0) ? ` <span class="t-roll">(DB${dbv >= 0 ? '+' : ''}${dbv})</span>` : '';
-  const mn = gr === 'special' ? ' <span class="t-roll">×1.5</span>' : gr === 'critical' ? ' <span class="t-roll">×2</span>' : '';
 
+  // ★重要：攻撃＋回避失敗＋ダメージ結果を一行にまとめる
   logs.push({
     cls: `log-attack-${as}`,
-    h: `<span class="cn-${as}">${att.name}</span>が「${w.name}」で攻撃 ${gt} → <span class="t-hit">ヒット！</span> <span class="t-dmg">-${tot}</span>${dbn}${mn} ／ <span class="cn-${ds}">${def.name}</span> HP <span class="t-roll">${ph}→</span><b>${def.hp}</b>`
+    h: `<span class="cn-${as}">${att.name}</span>の攻撃 <span class="t-roll">[${ar} / ${w.hit}]</span>${evadeLog}${critLabel} → <span class="t-hit">ヒット！</span> <span class="t-dmg">-${tot}</span> <span class="t-roll">${dbLabel}</span> ／ <span class="cn-${ds}">${def.name}</span> HP <b>${def.hp}</b>`
   });
   return logs;
 }
@@ -1764,14 +1834,16 @@ function doTurn() {
   B.stats.attacks++;
   if(attOrg) attOrg.stats.attacks++;
   
-  const logs = doAttack(att, def, as, ds);
+  // ★重要：自動で強い武器を探すのをやめ、常に一番上（0番目）の武器で攻撃を実行する
+  const logs = doAttack(att, def, as, ds); 
+
   logs.forEach(l => {
     addLog(l);
     const dmgMatch = l.h.match(/t-dmg">-(.+?)<\/span>/);
     if(dmgMatch){
       const dVal = parseInt(dmgMatch[1]);
       B.stats.dmg += dVal; // この試合の合計（画面表示用）
-      if(attOrg) attOrg.stats.dmgDealt += dVal; // 【重要】名簿の通算に直接加算
+      if(attOrg) attOrg.stats.dmgDealt += dVal; // 名簿の通算に直接加算
     }
   });
 
@@ -1785,7 +1857,7 @@ function doTurn() {
     if(sanMatch) {
       const sVal = parseInt(sanMatch[1]);
       B.stats.sanLost += sVal;
-      if(defOrg) defOrg.stats.sanLost += sVal; // 【重要】名簿の通算に直接加算
+      if(defOrg) defOrg.stats.sanLost += sVal; // 名簿の通算に直接加算
     }
   }
   
@@ -1804,7 +1876,7 @@ function doTurn() {
   if (B.turn === B.initTurn) {
     B.round++;
     updRound();
-    addLog({ cls: 'log-round', h: `ROUND ${B.round}！` });
+    addLog({ cls: 'log-round', h: `ROUND ${B.round}` });
   }
 }
 
@@ -1893,16 +1965,19 @@ function showOv(winner){
       <div class="rs"><div class="rs-v">${B.stats.sanLost}</div><div class="rs-l">SAN LOSS</div></div>
     </div>`;
 
-  let btns = '';
+let btns = '';
   
   if (isEnd) {
     // 大会終了時
-    btns = `<button class="rbtn primary" style="padding: 14px 40px; font-size: 16px;" onclick="showChamp(App.matches[App.matchIdx].winner)">🏆 最終結果を確認する</button>`;
+    btns = `<button class="rbtn primary" style="padding: 14px 40px; font-size: 16px;" onclick="showChamp(App.matches[App.matchIdx].winner)">最終結果を確認する</button>`;
   } else {
     // 途中経過
     btns = `<button class="rbtn secondary" onclick="document.getElementById('resultOv').classList.remove('show')">ログを見る</button>`;
-    // ★ここを修正：「次のラウンドへ」を「次の試合へ」に書き換え
-    btns += `<button class="rbtn primary" onclick="${hasMoreCurrent ? 'nextMatch()' : 'tryAdv()'}">次の試合へ ▶</button>`;
+    if (hasMoreCurrent) {
+      btns += `<button class="rbtn primary" onclick="nextMatch()">次の試合へ ▶</button>`;
+    } else {
+      btns += `<button class="rbtn primary" onclick="tryAdv()">次の試合へ ▶</button>`;
+    }
   }
 
   document.getElementById('ovBtns').innerHTML = btns;
@@ -1961,11 +2036,7 @@ function showOv(winner){
   } else {
     // 途中経過：ログを見るボタンを残す
     btns = `<button class="rbtn secondary" onclick="document.getElementById('resultOv').classList.remove('show')">ログを見る</button>`;
-    if (hasMoreCurrent) {
-      btns += `<button class="rbtn primary" onclick="nextMatch()">次の試合へ ▶</button>`;
-    } else {
-      btns += `<button class="rbtn primary" onclick="tryAdv()">次のラウンドへ ▶</button>`;
-    }
+    btns += `<button class="rbtn primary" onclick="${hasMoreCurrent ? 'nextMatch()' : 'tryAdv()'}">次の試合へ ▶</button>`;
   }
 
   document.getElementById('ovBtns').innerHTML = btns;
@@ -2003,9 +2074,9 @@ function advRound(){
   // これまでの履歴を消さずに、新しい試合を追加
   App.matchIdx = App.matches.length; 
   App.matches = App.matches.concat(nm); 
-  
+
   renderMatchQueue();
-  addLog({cls:'log-round', h:`🔥 第 ${nextRnd} 段階：${getRoundName(nextRnd, App.matches)} 開始！`});
+  addLog({cls:'log-round', h: `🔥 第 ${nextRnd} 段階：${getRoundName(nextRnd, App.matches)} 開始！`});
   loadMatch();
 }
 
@@ -2167,6 +2238,219 @@ function toggleHistoryLog(idx) {
     logEl.style.display = 'none';
   }
 }
+
+// 武器手動編集モード
+function editWeapon(charId) {
+  const c = App.roster.find(r => r.id === charId);
+  if (!c || !c.weapons[0]) return;
+
+  const displayArea = document.getElementById(`weapon-display-${charId}`);
+  const currentName = c.weapons[0].name;
+  const currentDmg = c.weapons[0].dmg;
+
+  // フォームに切り替え
+  displayArea.onclick = null; // 連打防止
+  displayArea.innerHTML = `
+    <div style="font-size: 9px; color: var(--yellow2); margin-bottom: 4px;">EDITING MODE</div>
+    <input type="text" class="edit-weapon-input" id="edit-name-${charId}" value="${currentName}" placeholder="武器名">
+    <input type="text" class="edit-weapon-input" id="edit-dmg-${charId}" value="${currentDmg}" placeholder="ダメージ(例:1d6+1)">
+    <button class="spd-btn" style="width:100%; margin-top:4px; background:var(--blue);" onclick="saveWeapon('${charId}')">保存</button>
+  `;
+  
+  // 入力欄以外をクリックした時に閉じたい場合はここでイベント制御も可能ですが、まずはシンプルに保存ボタンで
+}
+
+// 編集内容を保存
+function saveWeapon(charId) {
+  const c = App.roster.find(r => r.id === charId);
+  const newName = document.getElementById(`edit-name-${charId}`).value.trim();
+  const newDmg = document.getElementById(`edit-dmg-${charId}`).value.trim();
+
+  if (c && c.weapons[0]) {
+    c.weapons[0].name = newName || '素手';
+    c.weapons[0].dmg = newDmg || '1d3';
+    // ダメージにDBが含まれているか、格闘系名前に変わった場合はフラグを更新
+    c.weapons[0].hasDB = newDmg.toUpperCase().includes('DB') || !!newName.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ナイフ|ピッケル/);
+  }
+
+  renderGrid(); // 再描画して確定
+}
+
+// モーダルを閉じる
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('show');
+}
+
+// モーダルを開く
+function openEditModal(charId) {
+  const c = App.roster.find(r => r.id === charId);
+  if (!c) return;
+
+  const body = document.getElementById('editModalBody');
+  if (!body) return;
+
+  // 1. メイン武器（編集可能）
+  const mainW = c.weapons[0] || { name: '素手', rawHit: 50, dmg: '1d3' };
+  
+  if (!mainW.dbMode) {
+    mainW.dbMode = mainW.hasDB ? 'full' : 'none';
+  }
+  const currentMode = mainW.dbMode;
+
+  const mainHtml = `
+    <div style="background: rgba(68,136,255,0.08); border: 1px solid var(--blue); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+      <div style="font-size: 11px; color: var(--blue3); font-weight: 900; letter-spacing: 1px; margin-bottom: 10px;">メイン武器</div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 60px 100px; gap: 10px; align-items: center; margin-bottom:15px;">
+        <div>
+          <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:4px;">武器名</label>
+          <input type="text" class="url-inp" style="padding:8px; width:100%;" id="edit-w-name-0" value="${mainW.name}">
+        </div>
+        <div>
+          <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:4px;">成功率(%)</label>
+          <input type="number" class="url-inp" style="padding:8px; text-align:center; width:100%;" id="edit-w-hit-0" value="${mainW.rawHit}">
+        </div>
+        <div>
+          <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:4px;">基礎ダメージ</label>
+          <input type="text" class="url-inp" style="padding:8px; font-family:'Share Tech Mono'; width:100%;" id="edit-w-dmg-0" value="${mainW.dmg.replace(/\+?DB/gi, '')}">
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+        <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:6px;">ダメージボーナス (DB) 設定</label>
+        <div style="display: flex; gap: 4px;" id="edit-db-group">
+          <button class="spd-btn ${currentMode === 'full' ? 'active' : ''}" style="flex:1" data-mode="full" onclick="setDbMode('${charId}', 'full')">DBあり</button>
+          <button class="spd-btn ${currentMode === 'half' ? 'active' : ''}" style="flex:1" data-mode="half" onclick="setDbMode('${charId}', 'half')">1/2 DB</button>
+          <button class="spd-btn ${currentMode === 'none' ? 'active' : ''}" style="flex:1" data-mode="none" onclick="setDbMode('${charId}', 'none')">なし</button>
+        </div>
+        <input type="hidden" id="edit-w-dbmode-0" value="${currentMode}">
+      </div>
+    </div>
+  `;
+
+  // 2. サブ武器リスト
+  let subHtml = '';
+  if (c.weapons.length > 1) {
+    const subItems = c.weapons.slice(1).map((w, i) => `
+      <div onclick="setMainWeapon('${charId}', ${i + 1})" class="editable-zone" 
+           style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px;">
+        <div style="font-size: 13px;">
+          <span style="color: var(--text2); font-weight: 700;">${w.name}</span>
+          <span style="color: var(--text3); font-size: 11px; margin-left: 8px;">(${w.rawHit}%)</span>
+        </div>
+        <div style="font-size: 10px; color: var(--blue3); font-weight: 700;">使う ➔</div>
+      </div>
+    `).join('');
+    
+    subHtml = `<div style="font-size: 11px; color: var(--text3); margin-bottom: 8px; letter-spacing: 1px;">その他の武器（クリックでメインに設定）</div><div style="margin-bottom: 20px;">${subItems}</div>`;
+  }
+
+  // 3. 全体描画
+  body.innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <div style="font-size: 11px; color: var(--blue3); margin-bottom: 5px; letter-spacing: 1px;">キャラクター情報</div>
+      <input type="text" class="url-inp" id="edit-pc-name" value="${c.name}" style="font-size: 16px; font-weight: 900; width: 100%; margin-bottom: 8px; border-color: var(--blue2);">
+      <input type="text" class="url-inp" id="edit-pc-job" value="${c.job}" style="width: 100%; color: var(--text2);">
+    </div>
+    
+    <div style="font-size: 11px; color: var(--blue3); margin-bottom: 5px; letter-spacing: 1px;">ステータス</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+      <div>
+        <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:4px;">HP</label>
+        <input type="number" class="url-inp" style="padding:5px; text-align:center; width:100%;" id="edit-pc-hp" value="${c.hp}">
+      </div>
+      <div>
+        <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:4px;">SAN(現在値)</label>
+        <input type="number" class="url-inp" style="padding:5px; text-align:center; width:100%;" id="edit-pc-san" value="${c.san}">
+      </div>
+      <div>
+        <label style="font-size: 9px; color: var(--text3); display:block; margin-bottom:4px;">回避(%)</label>
+        <input type="number" class="url-inp" style="padding:5px; text-align:center; width:100%;" id="edit-pc-dodge" value="${c.dodge}">
+      </div>
+    </div>
+
+    ${mainHtml}
+    ${subHtml}
+  `;
+
+  document.getElementById('saveModalBtn').onclick = () => saveModalEdit(charId);
+  const modalBox = document.querySelector('#editModal .result-box');
+  modalBox.onclick = (e) => e.stopPropagation();
+  document.getElementById('editModal').classList.add('show');
+}
+
+// DBモードを切り替えるヘルパー
+function setDbMode(charId, mode) {
+  const btns = document.querySelectorAll('#edit-db-group button');
+  btns.forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+  });
+  // 隠しフィールドに値を一時保存
+  document.getElementById('edit-w-dbmode-0').value = mode;
+}
+
+// 修正内容を保存する
+function saveModalEdit(charId) {
+  const c = App.roster.find(r => r.id === charId);
+  if (!c) return;
+
+  c.name = document.getElementById('edit-pc-name').value;
+  c.job = document.getElementById('edit-pc-job').value;
+  c.hpMax = parseInt(document.getElementById('edit-pc-hp').value) || 1;
+  c.hp = c.hpMax;
+  c.san = parseInt(document.getElementById('edit-pc-san').value) || 0;
+  c.dodge = parseInt(document.getElementById('edit-pc-dodge').value) || 0;
+
+  if (c.weapons && c.weapons.length > 0) {
+    const w = c.weapons[0];
+    w.name = document.getElementById('edit-w-name-0').value;
+    const newHit = parseInt(document.getElementById('edit-w-hit-0').value) || 0;
+    w.rawHit = newHit;
+    w.hit = c.is7th ? Math.floor(newHit * 0.8) : newHit;
+
+    // 基礎ダメージ（入力値）を保存
+    const baseDmg = document.getElementById('edit-w-dmg-0').value.replace(/\+?DB/gi, '');
+    w.dmg = baseDmg;
+
+    // DBモードを確定保存
+    const mode = document.getElementById('edit-w-dbmode-0').value;
+    w.dbMode = mode;
+    w.hasDB = (mode !== 'none');
+
+    // ★重要：戦闘画面（緑枠）用の表示テキストを更新
+    // 1d6 + DB のような形式にする
+    let displayDmg = baseDmg;
+    if (mode === 'full') displayDmg += "+DB";
+    else if (mode === 'half') displayDmg += "+1/2DB";
+    
+    w.displayDmg = displayDmg; // 表示用プロパティを別途保持
+  }
+
+  closeEditModal();
+  renderGrid();
+}
+
+function setMainWeapon(charId, weaponIdx) {
+  const c = App.roster.find(r => r.id === charId);
+  if (!c || !c.weapons[weaponIdx]) return;
+
+  // ★修正：現在「メイン武器」の欄に入力されている値だけを一時保存する
+  const mainName = document.getElementById(`edit-w-name-0`).value;
+  const mainHit = parseInt(document.getElementById(`edit-w-hit-0`).value) || 0;
+  const mainDmg = document.getElementById(`edit-w-dmg-0`).value;
+
+  // 現在のメイン武器に編集内容を反映
+  c.weapons[0].name = mainName;
+  c.weapons[0].rawHit = mainHit;
+  c.weapons[0].dmg = mainDmg;
+
+  // 選択したサブ武器を先頭（メイン）に移動
+  const selected = c.weapons.splice(weaponIdx, 1)[0];
+  c.weapons.unshift(selected);
+
+  // 再描画して反映
+  openEditModal(charId);
+}
 </script>
 <footer style="text-align: center; padding: 20px 0; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05);">
   <a href="https://x.com/trpg_cat" target="_blank" rel="noopener noreferrer" 
@@ -2174,5 +2458,17 @@ function toggleHistoryLog(idx) {
     © とむねこ（@trpg_cat）
   </a>
 </footer>
+<div class="overlay" id="editModal" onclick="if(event.target === this) closeEditModal()">
+  <div class="result-box edit-modal-content" style="text-align: left; max-width: 600px; border-color: var(--blue2); padding: 30px;">
+    <div class="result-title" style="font-size: 20px; margin-bottom: 15px; color: var(--blue3); flex-shrink: 0;">📊 ステータス・技能編集</div>
+    
+    <div id="editModalBody"></div>
+    
+    <div class="result-btns edit-modal-footer">
+      <button class="rbtn secondary" onclick="closeEditModal()">キャンセル</button>
+      <button class="rbtn primary" id="saveModalBtn">修正を保存する</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
