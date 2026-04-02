@@ -699,7 +699,7 @@ footer a:hover {
     <div class="champ-label">TOURNAMENT CHAMPION</div>
     <div class="champ-name" id="champName">—</div>
     <div class="champ-sub">最後の勝者！おめでとう！</div>
-    <button class="rbtn primary" onclick="resetAll()">🔄 最初から</button>
+    <button class="rbtn primary" onclick="resetAll()">最初からはじめる</button>
   </div>
 
 </div><!-- /battlePage -->
@@ -1866,10 +1866,12 @@ function showOv(winner){
   const isTrn = App.mode === 'tournament';
   const hasMoreCurrent = hasNext();
   
+  // 生存者（まだ負けていない人）のIDを特定
   const allWinners = App.matches.filter(m => m.winner !== null).map(m => m.winner.id);
   const allLosers = App.matches.filter(m => m.loser !== null).map(m => m.loser.id);
   const survivorIds = [...new Set(allWinners)].filter(id => !allLosers.includes(id));
 
+  // 決勝戦かどうかの判定
   const isFinal = isTrn && !hasMoreCurrent && survivorIds.length <= 1;
   const isEnd = !isTrn || isFinal;
 
@@ -1877,6 +1879,7 @@ function showOv(winner){
   document.getElementById('ovName').textContent = winner.name;
   document.getElementById('ovSub').textContent = isEnd ? 'すべての試合が終了しました！' : `${B.round}ラウンドの激闘を制した！`;
 
+  // 表示する数値を「B.stats（この試合の合計）」に限定
   document.getElementById('ovStats').innerHTML = `
     <div style="width: 100%; display: flex; justify-content: center; margin-bottom: 12px;">
       <div class="rs" style="min-width: 120px; border: 1px solid var(--yellow);">
@@ -1893,10 +1896,12 @@ function showOv(winner){
   let btns = '';
   
   if (isEnd) {
+    // 大会終了時
     btns = `<button class="rbtn primary" style="padding: 14px 40px; font-size: 16px;" onclick="showChamp(App.matches[App.matchIdx].winner)">🏆 最終結果を確認する</button>`;
   } else {
+    // 途中経過
     btns = `<button class="rbtn secondary" onclick="document.getElementById('resultOv').classList.remove('show')">ログを見る</button>`;
-    // ★文言修正：トーナメントの区切りに関わらず「次の試合へ」に統一
+    // ★ここを修正：「次のラウンドへ」を「次の試合へ」に書き換え
     btns += `<button class="rbtn primary" onclick="${hasMoreCurrent ? 'nextMatch()' : 'tryAdv()'}">次の試合へ ▶</button>`;
   }
 
@@ -2037,11 +2042,12 @@ function showChamp(c){
   
   const tweetText = encodeURIComponent(
     `【2026エイプリル】CoC探索者バトルで「${c.name}」が優勝しました！\n\n` +
-    `🏆 最終通算リザルト\n` +
-    `総試合数：${c.stats.matchCount} 試合\n` + // ★追加
-    `総生存ラウンド：${c.stats.totalRounds}\n` +
-    `総ダメージ：${c.stats.dmgDealt}\n` +
-    `総正気度喪失：${c.stats.sanLost}\n\n` +
+    `▶最終通算リザルト\n` +
+    `　総試合数：${c.stats.matchCount} 試合\n` +
+    `　総生存ラウンド：${c.stats.totalRounds}\n` +
+    `　総ダメージ：${c.stats.dmgDealt}\n` +
+    `　総正気度喪失：${c.stats.sanLost}\n` +
+    `#CoC探索者バトル\n\n` +
     `▼ 再挑戦はこちら\n` +
     `https://mut-tom.github.io/april2026/`
   );
@@ -2063,7 +2069,7 @@ function showChamp(c){
         結果をポストする
       </a>
     </div>
-    <button class="rbtn primary" onclick="resetAll()">🔄 最初から</button>
+    <button class="rbtn primary" onclick="resetAll()">最初からはじめる</button>
   `;
   
   champBox.classList.add('show');
