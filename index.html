@@ -580,7 +580,7 @@ footer a:hover {
   <!-- URL入力 -->
   <div class="panel">
     <div class="panel-title">
-      <span class="icon">🔗</span>キャラクターシートを追加 
+      キャラクターシートを追加 
       <span style="font-size: 10px; opacity: 0.7; font-weight: 400; margin-left: 4px;">(保管所 / Charaeno / 各種JSONデータ 対応)</span>
     </div>
     <div class="add-row" style="flex-direction: column; gap: 10px;">
@@ -597,14 +597,14 @@ footer a:hover {
       複数URLはスペース・改行区切りで一括入力可
     </p>
     <div class="char-grid" id="charGrid">
-      <div class="empty-hint" id="emptyHint">👆 URLを入力して探索者を追加してください</div>
+      <div class="empty-hint" id="emptyHint">URLを入力して探索者を追加してください</div>
     </div>
     <div class="dbg" id="dbgBox"></div>
   </div>
 
   <!-- モード選択 -->
   <div class="panel" id="modePanel" style="display:none">
-    <div class="panel-title"><span class="icon">⚔️</span>戦闘モードを選択</div>
+    <div class="panel-title">戦闘モードを選択</div>
 
     <div class="mode-row">
       <button class="mode-btn active" id="modeTrn" onclick="setMode('tournament')">
@@ -623,12 +623,12 @@ footer a:hover {
     <div id="pickerArea" style="display:none">
       <div class="picker-wrap">
         <div class="picker-side">
-          <div class="picker-side-title red">🩸 赤コーナー</div>
+          <div class="picker-side-title red">赤コーナー</div>
           <div class="pick-options" id="pickL"></div>
         </div>
         <div class="pick-vs">VS</div>
         <div class="picker-side">
-          <div class="picker-side-title blue">💧 青コーナー</div>
+          <div class="picker-side-title blue">青コーナー</div>
           <div class="pick-options" id="pickR"></div>
         </div>
       </div>
@@ -637,7 +637,7 @@ footer a:hover {
     <!-- 開始ボタン -->
     <div class="start-area" style="margin-top:20px">
       <button class="btn-start" id="startBtn" onclick="startBattle()">
-        ⚔️ バトル開始！
+        バトル開始！
       </button>
       <div class="start-note" id="startNote">2名以上登録すると開始できます</div>
     </div>
@@ -671,7 +671,7 @@ footer a:hover {
 
   <!-- ログ -->
   <div class="battle-log-wrap">
-    <div class="blog-title">📜 バトルログ</div>
+    <div class="blog-title">バトルログ</div>
     <div class="battle-log" id="battleLog"></div>
   </div>
 
@@ -689,8 +689,7 @@ footer a:hover {
     </button>
   </div>
 
-  <div id="matchQueueWrap" style="max-height: 300px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 10px;">
-      <div style="font-size:12px;font-weight:700;color:var(--text2); margin-bottom:8px;">📋 対戦表</div>
+  <div id="matchQueueWrap" style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 10px;">
       <div class="match-queue" id="matchQueue"></div>
   </div>
 
@@ -710,7 +709,6 @@ footer a:hover {
 <!-- ══ RESULT OVERLAY ══ -->
 <div class="overlay" id="resultOv">
   <div class="result-box">
-    <div class="result-emoji" id="ovEmoji">⚔️</div>
     <div class="result-title" id="ovTitle">決着！</div>
     <div class="result-name" id="ovName"></div>
     <div class="result-sub" id="ovSub"></div>
@@ -982,7 +980,7 @@ function parseChar(raw, id) {
     db: { l: dbData.l, fixed: dbData.r() },
     weapons: weaponList,
     dodge: is7th ? Math.round((parseInt(vals[0]) || (DEX * 5)) * 0.6) : (parseInt(vals[0]) || (DEX * 2)),
-    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0 }
+    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0, matchCount: 0 }
   };
 }
 
@@ -1088,7 +1086,7 @@ function parseCharaeno(json, id, edition) {
     weapons,
     // 回避も1/5にせず元の値を保持
     dodge: sm['回避'] || (is7th ? (c.dex || 50) : (DEX * 2)), 
-    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0 }
+    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0, matchCount: 0 }
   };
 }
 
@@ -1191,7 +1189,7 @@ function parseJSON(json) {
     db: { l: db_l, fixed: db_r() },
     weapons, 
     dodge: is7th ? Math.floor((getVal('DEX') || 10) * 0.5 * 0.6) : (sDEX * 2),
-    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0 }
+    stats: { attacks: 0, dmgDealt: 0, sanLost: 0, totalRounds: 0, matchCount: 0 }
   };
 }
 
@@ -1512,16 +1510,32 @@ function buildNextRound(prev){
 }
 
 function renderMatchQueue() {
+  const wrap = document.getElementById('matchQueueWrap');
   const el = document.getElementById('matchQueue');
-  if (!el) return;
+  if (!wrap || !el) return;
 
-  let html = '';
+  // 1. 親要素のレイアウト設定
+  wrap.style.position = 'relative';
+  wrap.style.maxHeight = '450px';
+  wrap.style.overflow = 'hidden'; 
+  wrap.style.display = 'flex';
+  wrap.style.flexDirection = 'column';
+
+  // 2. 固定ヘッダー：バトルログのヘッダー（.blog-title）のデザインを継承
+  // 色を var(--text2) に、背景を var(--bg3) に合わせて統一感を出します
+  const headerHtml = `
+    <div style="flex-shrink: 0; padding: 8px 14px; background: var(--bg3); font-size: 11px; font-weight: 700; color: var(--text2); border-bottom: 1px solid var(--border); letter-spacing: 1px;">
+      対戦表（クリックで過去のログを表示）
+    </div>`;
+
+  // 3. リスト本体の生成
+  let listHtml = '';
   let lastRound = 0;
 
   App.matches.forEach((m, i) => {
     if (m.round !== lastRound) {
       const roundName = getRoundName(m.round, App.matches);
-      html += `<div class="log-round" style="margin: 15px 0 8px 0; border-radius: 8px;">第 ${m.round} 段階：${roundName}</div>`;
+      listHtml += `<div class="log-round" style="margin: 15px 0 8px 0; border-radius: 8px;">第 ${m.round} 段階：${roundName}</div>`;
       lastRound = m.round;
     }
 
@@ -1530,32 +1544,27 @@ function renderMatchQueue() {
     const badgeCls = isDone ? 'win' : (isCurrent ? 'cur' : 'wait');
     const badgeTxt = isDone ? '終了' : (isCurrent ? 'NOW' : '待機');
     
-    // ★ここからボタン（タブ）の中身のレイアウト
-    html += `
+    listHtml += `
       <div id="mq-item-${i}" class="mq-item ${isCurrent ? 'current' : ''} ${isDone ? 'done' : ''}" 
            onclick="toggleHistoryLog(${i})" 
            style="cursor: pointer; display: flex; flex-direction: column; align-items: stretch; padding: 12px 15px; margin-bottom: 6px; border-radius: 8px; border-left: 4px solid ${isCurrent ? 'var(--blue2)' : 'var(--border)'}; background: var(--card);">
-        
         <div style="display: flex; align-items: center; width: 100%; gap: 12px;">
           <span class="mq-badge ${badgeCls}">${badgeTxt}</span>
-          
           ${(isDone && !m.isBye) ? `<span style="font-family:'Share Tech Mono',monospace; font-size: 11px; color: var(--yellow2); font-weight: 900; background: rgba(232,192,32,0.15); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--yellow); white-space: nowrap;">${m.round_count || '?' } RND</span>` : ''}
-
           <div style="flex: 1; text-align: center; font-size: 13px;">
             <span style="${m.winner?.id === m.l?.id ? 'font-weight:bold; color:var(--blue2);' : ''}">${m.l?.name || '?'}</span>
             <span style="opacity: 0.4; margin: 0 8px;">vs</span>
             <span style="${m.winner?.id === m.r?.id ? 'font-weight:bold; color:var(--blue2);' : ''}">${m.r?.name || '—'}</span>
           </div>
-          
           ${isDone ? '<span style="font-size: 10px; opacity: 0.6; color: var(--text3);">▼ ログ</span>' : ''}
         </div>
-
         <div id="history-log-${i}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; max-height: 250px; overflow-y: auto; text-align: left;">
         </div>
       </div>`;
   });
 
-  el.innerHTML = html;
+  // 4. 要素の流し込み（リスト側にスクロールを持たせる）
+  wrap.innerHTML = headerHtml + `<div id="matchQueue" style="overflow-y: auto; flex: 1; padding: 10px 4px 10px 0;">${listHtml}</div>`;
 }
 
 function getRoundName(round, allMatches) {
@@ -1803,55 +1812,96 @@ function finishMatch(winner, loser, ws) {
   B.over = true; B.running = false; clearTimeout(B.timer);
   addLog({cls:'log-result', h:`🏅 <span class="cn-${ws}">${winner.name}</span> の勝利！`});
 
-  // 両者の通算戦績に、この試合で戦ったラウンド数を加算
+  // 勝者の名簿データを特定して試合数をカウント
+  const originalWinner = App.roster.find(c => c.id === winner.id);
+  if (originalWinner) {
+    originalWinner.stats.matchCount = (originalWinner.stats.matchCount || 0) + 1; // ★ここを追加
+  }
+
   [B.L, B.R].forEach(side => {
     const original = App.roster.find(r => r.id === side.id);
     if (original) {
       original.stats.attacks = side.stats.attacks;
       original.stats.dmgDealt = side.stats.dmgDealt;
       original.stats.sanLost = side.stats.sanLost;
-      // ★この試合のラウンド数を個人の累計に加算
       original.stats.totalRounds += B.round; 
     }
   });
 
-  // 現在の勝者データを名簿から取得
-  const originalWinner = App.roster.find(c => c.id === winner.id);
   const originalLoser = App.roster.find(c => c.id === loser.id);
 
   const m = App.matches[App.matchIdx];
-  m.round_count = B.round; // ★この試合の最終ラウンド数を記録
+  m.round_count = B.round; 
   if(originalWinner) {
-    m.winner = cp(originalWinner); // 通算戦績が含まれた最新状態をコピー
-    m.winner.db.fixed = originalWinner.db.fixed;
+    m.winner = cp(originalWinner);
+    restoreFunc(m.winner);
   }
   if(originalLoser) m.loser = cp(originalLoser);
   
   renderMatchQueue();
 
   const hasMore = hasNext();
-  const nextRndMatches = App.mode === 'tournament' ? buildNextRound(App.matches) : null;
-  const isFinalChamp = App.mode === 'tournament' && !hasMore && (!nextRndMatches || nextRndMatches.length === 0);
-
+  // ★文言修正：「次のラウンド」ではなく「次の試合」に統一
   const nsb = document.getElementById('nextStepBtn');
   if(nsb) {
+    const nextRndMatches = App.mode === 'tournament' ? buildNextRound(App.matches) : null;
+    const isFinalChamp = App.mode === 'tournament' && !hasMore && (!nextRndMatches || nextRndMatches.length === 0);
+
     if (isFinalChamp) nsb.style.display = 'none';
     else {
       nsb.style.display = 'block';
-      if(App.mode === 'tournament' && hasMore) nsb.textContent = '次の試合へ ▶';
-      else if(App.mode === 'tournament' && !hasMore) nsb.textContent = '次のラウンドへ ▶';
-      else nsb.textContent = '🔄 最初から';
+      nsb.textContent = '次の試合へ ▶'; // 常にこれで統一
     }
   }
 
-  // 試合終了時にそのバトルのログを保存
   App.historyLogs[m.id] = document.getElementById('battleLog').innerHTML;
   renderMatchQueue();
 
   setTimeout(() => {
-    // 常に名簿（App.roster）にある正確な累計データを使用してリザルトを表示
     showOv(originalWinner); 
   }, 800);
+}
+
+function showOv(winner){
+  const isTrn = App.mode === 'tournament';
+  const hasMoreCurrent = hasNext();
+  
+  const allWinners = App.matches.filter(m => m.winner !== null).map(m => m.winner.id);
+  const allLosers = App.matches.filter(m => m.loser !== null).map(m => m.loser.id);
+  const survivorIds = [...new Set(allWinners)].filter(id => !allLosers.includes(id));
+
+  const isFinal = isTrn && !hasMoreCurrent && survivorIds.length <= 1;
+  const isEnd = !isTrn || isFinal;
+
+  document.getElementById('ovTitle').textContent = isEnd ? '✨ 大会終了 ✨' : '決着！';
+  document.getElementById('ovName').textContent = winner.name;
+  document.getElementById('ovSub').textContent = isEnd ? 'すべての試合が終了しました！' : `${B.round}ラウンドの激闘を制した！`;
+
+  document.getElementById('ovStats').innerHTML = `
+    <div style="width: 100%; display: flex; justify-content: center; margin-bottom: 12px;">
+      <div class="rs" style="min-width: 120px; border: 1px solid var(--yellow);">
+        <div class="rs-v">${B.round}</div>
+        <div class="rs-l">MATCH ROUND</div>
+      </div>
+    </div>
+    <div style="width: 100%; display: flex; justify-content: center; gap: 8px;">
+      <div class="rs"><div class="rs-v">${B.stats.attacks}</div><div class="rs-l">ATTACKS</div></div>
+      <div class="rs"><div class="rs-v">${B.stats.dmg}</div><div class="rs-l">DAMAGE</div></div>
+      <div class="rs"><div class="rs-v">${B.stats.sanLost}</div><div class="rs-l">SAN LOSS</div></div>
+    </div>`;
+
+  let btns = '';
+  
+  if (isEnd) {
+    btns = `<button class="rbtn primary" style="padding: 14px 40px; font-size: 16px;" onclick="showChamp(App.matches[App.matchIdx].winner)">🏆 最終結果を確認する</button>`;
+  } else {
+    btns = `<button class="rbtn secondary" onclick="document.getElementById('resultOv').classList.remove('show')">ログを見る</button>`;
+    // ★文言修正：トーナメントの区切りに関わらず「次の試合へ」に統一
+    btns += `<button class="rbtn primary" onclick="${hasMoreCurrent ? 'nextMatch()' : 'tryAdv()'}">次の試合へ ▶</button>`;
+  }
+
+  document.getElementById('ovBtns').innerHTML = btns;
+  document.getElementById('resultOv').classList.add('show');
 }
 
 // 適切な場所（Script内の最後など）に追加
@@ -1880,7 +1930,6 @@ function showOv(winner){
   const isFinal = isTrn && !hasMoreCurrent && survivorIds.length <= 1;
   const isEnd = !isTrn || isFinal;
 
-  document.getElementById('ovEmoji').textContent = winner ? '🎉' : '💀';
   document.getElementById('ovTitle').textContent = isEnd ? '✨ 大会終了 ✨' : '決着！';
   document.getElementById('ovName').textContent = winner.name;
   document.getElementById('ovSub').textContent = isEnd ? 'すべての試合が終了しました！' : `${B.round}ラウンドの激闘を制した！`;
@@ -1903,10 +1952,10 @@ function showOv(winner){
   
   if (isEnd) {
     // ★大会終了時：ログを見るボタンを消し、最終結果ボタンのみにする
-    btns = `<button class="rbtn primary" style="padding: 14px 40px; font-size: 16px;" onclick="showChamp(App.matches[App.matchIdx].winner)">🏆 最終結果を確認する</button>`;
+    btns = `<button class="rbtn primary" style="padding: 14px 40px; font-size: 16px;" onclick="showChamp(App.matches[App.matchIdx].winner)">最終結果を確認する</button>`;
   } else {
     // 途中経過：ログを見るボタンを残す
-    btns = `<button class="rbtn secondary" onclick="document.getElementById('resultOv').classList.remove('show')">📜 ログを見る</button>`;
+    btns = `<button class="rbtn secondary" onclick="document.getElementById('resultOv').classList.remove('show')">ログを見る</button>`;
     if (hasMoreCurrent) {
       btns += `<button class="rbtn primary" onclick="nextMatch()">次の試合へ ▶</button>`;
     } else {
@@ -1986,11 +2035,11 @@ function showChamp(c){
   if(!c) return;
   addLog({cls:'log-result', h:`🏆 優勝：${c.name}！！`});
   
-  // 投稿内容：優勝したキャラクター(c)の累計統計(stats)を使用
   const tweetText = encodeURIComponent(
     `【2026エイプリル】CoC探索者バトルで「${c.name}」が優勝しました！\n\n` +
     `🏆 最終通算リザルト\n` +
-    `総生存ラウンド：${c.stats.totalRounds}\n` + // ★追加
+    `総試合数：${c.stats.matchCount} 試合\n` + // ★追加
+    `総生存ラウンド：${c.stats.totalRounds}\n` +
     `総ダメージ：${c.stats.dmgDealt}\n` +
     `総正気度喪失：${c.stats.sanLost}\n\n` +
     `▼ 再挑戦はこちら\n` +
@@ -1999,14 +2048,14 @@ function showChamp(c){
   const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
 
   const champBox = document.getElementById('champWrap');
-  // 画面表示：c.stats.dmgDealt と c.stats.sanLost を表示
   champBox.innerHTML = `
     <div class="champ-trophy">🏆</div>
     <div class="champ-label">TOURNAMENT CHAMPION</div>
     <div class="champ-name">${c.name}</div>
     <div class="champ-sub">
       【大会通算戦績】<br>
-      総ラウンド: ${c.stats.totalRounds} / 総ダメージ: ${c.stats.dmgDealt} / 総SAN喪失: ${c.stats.sanLost}
+      総試合数: ${c.stats.matchCount} / 総ラウンド: ${c.stats.totalRounds}<br>
+      総ダメージ: ${c.stats.dmgDealt} / 総SAN喪失: ${c.stats.sanLost}
     </div>
     <div style="margin-bottom: 20px;">
       <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" class="btn-tweet">
@@ -2019,7 +2068,6 @@ function showChamp(c){
   
   champBox.classList.add('show');
   
-  // 他のUIを隠す
   document.getElementById('resultOv').classList.remove('show');
   const ctrl = document.querySelector('.btl-ctrl');
   if(ctrl) ctrl.style.display = 'none';
