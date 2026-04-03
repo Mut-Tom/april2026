@@ -1603,7 +1603,6 @@ function parseJSON(json) {
 }
 
 // ══ ROSTER UI ════════════════════════════════════
-
 function addFromInput(){
   const inputEl = document.getElementById('urlInput');
   const raw = inputEl.value.trim();
@@ -2474,12 +2473,11 @@ function showChamp(c){
   addLog({cls:'log-result', h:`🏆 優勝：${c.name}！！`});
   
   // シェア用テキストの構築
-  const resultText = `【2026エイプリル】CoC探索者バトル 優勝！\n\n` +
-    `優勝：${c.name}\n` +
+  const resultText = `【2026エイプリル】CoC探索者バトルに${c.name}が優勝しました！\n\n` +
     `▶最終通算リザルト\n` +
     `　試合数：${c.stats.matchCount} 試合\n` +
-    `　生存R：${c.stats.totalRounds}\n` +
-    `　与ダメ：${c.stats.dmgDealt}\n` +
+    `　生存ラウンド：${c.stats.totalRounds}\n` +
+    `　与ダメージ：${c.stats.dmgDealt}\n` +
     `　総SAN喪失：-${c.stats.sanLost}\n` +
     `#CoC探索者バトル\n` +
     `https://mut-tom.github.io/april2026/`;
@@ -2493,8 +2491,8 @@ function showChamp(c){
     <div class="champ-name">${c.name}</div>
     <div class="champ-sub">
       【大会通算戦績】<br>
-      試合数：${c.stats.matchCount} 試合 / 生存R：${c.stats.totalRounds}<br>
-      与ダメ：${c.stats.dmgDealt} / 総SAN喪失: ${c.stats.sanLost}
+      試合数：${c.stats.matchCount} 試合 / 生存ラウンド：${c.stats.totalRounds}<br>
+      与ダメージ：${c.stats.dmgDealt} / 総SAN喪失: ${c.stats.sanLost}
     </div>
 
     <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
