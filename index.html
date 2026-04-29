@@ -983,11 +983,11 @@ footer a:hover{ opacity:1 !important; color:var(--cyan) !important; }
 
   <header class="site-header">
     <div class="header-bg">
-      <div class="header-title">CoC探索者バトル</div>
-      <div class="header-subtitle">APRIL FOOL 2026</div>
+      <div class="header-title">探索者バトル</div>
+      <div class="header-subtitle">APRIL FOOL 2026 — CTHULHU MYTHOS TRPG</div>
     </div>
     <div class="header-info">
-      <p>探索者たちが謎の宇宙空間に閉じ込められた！勝ち残らなければここから出ることはできない。</p>
+      <p>探索者たちが謎の宇宙空間に閉じ込められた。勝ち残らなければここから出ることはできない。</p>
       <ul>
         <li>戦闘ルールは6版をベースとしています</li>
         <li>7版のキャラシも自動コンバートされます</li>
@@ -1008,7 +1008,8 @@ footer a:hover{ opacity:1 !important; color:var(--cyan) !important; }
       <button class="btn-add" onclick="addFromInput()" style="width:100%;padding:14px;">探索者を追加</button>
     </div>
     <p class="hint">
-      複数URLは改行区切りで一括入力可
+      複数URLは改行区切りで一括入力可 /
+      <a href="#" onclick="loadSample();return false">サンプルを読み込む</a>
     </p>
     <div class="char-grid" id="charGrid">
       <div class="empty-hint" id="emptyHint">
@@ -1154,6 +1155,15 @@ const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const cp=o=>JSON.parse(JSON.stringify(o));
 function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
 
+// ダメージ文字列から OR 表記を安全に除去して最初のパーツを返す
+// 例: '2D10OR1D10' → '2D10', '2D10 OR 1D10' → '2D10', 'SWORD' → 'SWORD'
+function getFirstDmgPart(s) {
+  return String(s)
+    .replace(/([\dD])\s*[Oo][Rr]\s*([\dD])/g, '$1/$2') // 数字/D前後のOR → /
+    .replace(/\s+[Oo][Rr]\s+/gi, '/')                   // スペースOR → /
+    .split('/')[0].trim();
+}
+
 function rollDmg(s){
   if(!s) return {t:1, e:'1'};
   
@@ -1162,11 +1172,15 @@ function rollDmg(s){
   
   // 2. 「OR」「/」「スペース」などで区切られている場合、最初のパーツだけを取り出す
   // 例: "2D10 OR 1D10" -> "2D10" / "1D6+1+DB" -> "1D6+1+DB"
-  const firstPart = cleanStr.split(/[\s/OR]|または/)[0];
+  // OR / スラッシュ / 空白区切りで最初のパーツだけ取り出す
+  // "OR" を単語として認識して分割（[OR] だと O・R の1文字クラスになるバグを修正）
+  const firstPart = getFirstDmgPart(cleanStr);
 
   // 3. そのパーツの中から、ダイス式(○D○)や数値(+○)として有効なものだけを抽出して結合
-  // 例: "2D10" -> ["2D10"] / "1D6+1+DB" -> ["1D6", "+1"] ※DBなどは除外
-  const matches = firstPart.match(/([+\-]?\d+D\d+|[+\-]?\d+)/g);
+  // 例: "2D10" -> ["2D10"] / "1D6+1+DB" -> ["1D6", "+1"] ※DBは除外
+  // DB文字も除去（二重安全策）
+  const cleanPart = firstPart.replace(/\+?DB/gi, '');
+  const matches = cleanPart.match(/([+\-]?\d+D\d+|[+\-]?\d+)/g);
   
   if (!matches) return {t:1, e:'1'};
 
@@ -1321,9 +1335,9 @@ function parseChar(raw, id) {
         name: name,
         hit: hitVal,
         rawHit: hitVal,
-        dmg: dmgVal.replace(/\+?DB/gi, ''), // 基礎ダイスのみ保存
+        dmg: getFirstDmgPart(dmgVal.replace(/\+?DB/gi, '')), // DBとOR以降を除去
         dbMode: dmgVal.toUpperCase().includes('DB') ? 'full' : 'none',
-        hasDB: dmgVal.toUpperCase().includes('DB') || !!name.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘/)
+        hasDB: dmgVal.toUpperCase().includes('DB')
       });
     }
   }
@@ -1448,9 +1462,9 @@ function parseCharaeno(json, id, edition) {
       name: nm, 
       hit: hit, 
       rawHit: hit, 
-      dmg: (w.damage || '1d6').replace(/\+?DB/gi, ''), // 基礎ダイスのみ
+      dmg: getFirstDmgPart((w.damage || '1d6').replace(/\+?DB/gi, '')), // DBとOR以降を除去
       dbMode: isDbWeapon ? 'full' : 'none',
-      hasDB: isDbWeapon || !!nm.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ピッケル|斧|ナイフ/)
+      hasDB: isDbWeapon
     });
   });
 
@@ -1469,7 +1483,8 @@ function parseCharaeno(json, id, edition) {
           hit: s.value, // 技能値はそのまま
           rawHit: s.value,
           dmg: dmg,
-          hasDB: !nm.match(/射撃|拳銃|ライフル/)
+          hasDB: false,
+          dbMode: 'none'
         });
       }
     });
@@ -1603,6 +1618,32 @@ function parseJSON(json) {
 }
 
 // ══ ROSTER UI ════════════════════════════════════
+function loadSample(){
+  const urlSamples = [
+    'https://charaeno.com/6th/TvNb6cQAeJp82-iAxYTZl',
+    'https://charaeno.com/7th/0OEUDo8UJ1Ta00D4YmOYo',
+    'https://charasheet.vampire-blood.net/m74bae49336af9f3dde6c20f774246c93',
+    'https://charasheet.vampire-blood.net/me106bf4a74a9806468da844c646b92ab'
+  ];
+
+  // 6版サンプル
+  const simazuObj = {"kind":"character","data":{"name":"島津・R・世良江","initiative":7,"externalUrl":"https://iachara.com/view/135138","commands":"CCB<=50 【こぶし】","status":[{"label":"HP","value":13,"max":13},{"label":"SAN","value":75,"max":75}],"params":[{"label":"STR","value":"14"},{"label":"CON","value":"11"},{"label":"POW","value":"15"},{"label":"DEX","value":"7"},{"label":"APP","value":"13"},{"label":"SIZ","value":"14"},{"label":"INT","value":"17"},{"label":"EDU","value":"13"}]}};
+  
+  // 7版サンプル
+  const samiyaObj = {"kind":"character","data":{"name":"沙宮砂羽（ｻﾐﾔ ｽﾅﾊﾞ）","initiative":45,"externalUrl":"https://iachara.com/view/349298","commands":"CC<=50 【近接戦闘】","status":[{"label":"HP","value":14,"max":14},{"label":"SAN","value":70,"max":70}],"params":[{"label":"STR","value":"70"},{"label":"CON","value":"75"},{"label":"POW","value":"70"},{"label":"DEX","value":"45"},{"label":"APP","value":"55"},{"label":"SIZ","value":"65"},{"label":"INT","value":"60"},{"label":"EDU","value":"65"}]}};
+
+  const allSamples = [
+    ...urlSamples,
+    JSON.stringify(simazuObj), // 自動的にスペースなしの文字列になります
+    JSON.stringify(samiyaObj)
+  ];
+
+  const input = document.getElementById('urlInput');
+  input.value = allSamples.join('\n');
+  
+  addFromInput();
+}
+
 function addFromInput(){
   const inputEl = document.getElementById('urlInput');
   const raw = inputEl.value.trim();
@@ -2473,11 +2514,12 @@ function showChamp(c){
   addLog({cls:'log-result', h:`🏆 優勝：${c.name}！！`});
   
   // シェア用テキストの構築
-  const resultText = `【2026エイプリル】CoC探索者バトルに${c.name}が優勝しました！\n\n` +
+  const resultText = `【2026エイプリル】CoC探索者バトル 優勝！\n\n` +
+    `優勝：${c.name}\n` +
     `▶最終通算リザルト\n` +
     `　試合数：${c.stats.matchCount} 試合\n` +
-    `　生存ラウンド：${c.stats.totalRounds}\n` +
-    `　与ダメージ：${c.stats.dmgDealt}\n` +
+    `　生存R：${c.stats.totalRounds}\n` +
+    `　与ダメ：${c.stats.dmgDealt}\n` +
     `　総SAN喪失：-${c.stats.sanLost}\n` +
     `#CoC探索者バトル\n` +
     `https://mut-tom.github.io/april2026/`;
@@ -2491,8 +2533,8 @@ function showChamp(c){
     <div class="champ-name">${c.name}</div>
     <div class="champ-sub">
       【大会通算戦績】<br>
-      試合数：${c.stats.matchCount} 試合 / 生存ラウンド：${c.stats.totalRounds}<br>
-      与ダメージ：${c.stats.dmgDealt} / 総SAN喪失: ${c.stats.sanLost}
+      試合数：${c.stats.matchCount} 試合 / 生存R：${c.stats.totalRounds}<br>
+      与ダメ：${c.stats.dmgDealt} / 総SAN喪失: ${c.stats.sanLost}
     </div>
 
     <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
@@ -2646,7 +2688,11 @@ function saveWeapon(charId) {
     c.weapons[0].name = newName || '素手';
     c.weapons[0].dmg = newDmg || '1d3';
     // ダメージにDBが含まれているか、格闘系名前に変わった場合はフラグを更新
-    c.weapons[0].hasDB = newDmg.toUpperCase().includes('DB') || !!newName.match(/こぶし|パンチ|キック|頭突き|組み付き|格闘|近接戦闘|ナイフ|ピッケル/);
+    // OR表記を正規化（'2D10OR1D10' → '2D10'）
+    const cleanedDmg = getFirstDmgPart(newDmg.replace(/\+?DB/gi, ''));
+    c.weapons[0].dmg = cleanedDmg || '1d3';
+    c.weapons[0].hasDB = newDmg.toUpperCase().includes('DB');
+    c.weapons[0].dbMode = c.weapons[0].hasDB ? 'full' : 'none';
   }
 
   renderGrid(); // 再描画して確定
@@ -2669,7 +2715,7 @@ function openEditModal(charId) {
   const mainW = c.weapons[0] || { name: '素手', rawHit: 50, dmg: '1d3' };
   
   if (!mainW.dbMode) {
-    mainW.dbMode = mainW.hasDB ? 'full' : 'none';
+    mainW.dbMode = 'none';
   }
   const currentMode = mainW.dbMode;
 
@@ -2828,6 +2874,12 @@ function setMainWeapon(charId, weaponIdx) {
   openEditModal(charId);
 }
 </script>
+<footer style="text-align: center; padding: 20px 0; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05);">
+  <a href="https://x.com/trpg_cat" target="_blank" rel="noopener noreferrer" 
+     style="color: var(--text3); font-size: 11px; text-decoration: none; opacity: 0.6; transition: opacity 0.2s;">
+    © とむねこ（@trpg_cat）
+  </a>
+</footer>
 <div class="overlay" id="editModal" onclick="if(event.target === this) closeEditModal()">
   <div class="result-box edit-modal-content" style="text-align: left; max-width: 600px; border-color: var(--blue2); padding: 30px;">
     <div class="result-title" style="font-size: 20px; margin-bottom: 15px; color: var(--blue3); flex-shrink: 0;">📊 ステータス・技能編集</div>
