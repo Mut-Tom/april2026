@@ -1008,7 +1008,8 @@ footer a:hover{ opacity:1 !important; color:var(--cyan) !important; }
       <button class="btn-add" onclick="addFromInput()" style="width:100%;padding:14px;">探索者を追加</button>
     </div>
     <p class="hint">
-      複数URLは改行区切りで一括入力可
+      複数URLは改行区切りで一括入力可 /
+      <a href="#" onclick="loadSample();return false">サンプルを読み込む</a>
     </p>
     <div class="char-grid" id="charGrid">
       <div class="empty-hint" id="emptyHint">
@@ -1154,36 +1155,40 @@ const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const cp=o=>JSON.parse(JSON.stringify(o));
 function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
 
-// ダメージ計算用：2d10などの文字列をパースして振る
-function rollDmgStr(dmgStr) {
-  if (!dmgStr) return 0;
-  let total = 0;
-  // 空白を除去し、先頭に符号がない場合は + を付与して分割
-  const s = dmgStr.toString().toUpperCase().replace(/\s/g, '');
-  const parts = s.split(/(?=[+-])/);
+function rollDmg(s){
+  if(!s) return {t:1, e:'1'};
+  
+  // 1. 全角を半角にし、大文字に統一。or 以降や括弧内の注釈を切り捨てるための前処理
+  let cleanStr = String(s).toUpperCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+  
+  // 2. 「OR」「/」「スペース」などで区切られている場合、最初のパーツだけを取り出す
+  // 例: "2D10 OR 1D10" -> "2D10" / "1D6+1+DB" -> "1D6+1+DB"
+  const firstPart = cleanStr.split(/[\s/OR]|または/)[0];
 
-  parts.forEach(p => {
-    // 2D10 や 1D6 などにマッチ（先頭の符号は任意）
-    const diceMatch = p.match(/^([+-]?\d*)D(\d+)$/);
-    const flatMatch = p.match(/^([+-]?\d+)$/);
+  // 3. そのパーツの中から、ダイス式(○D○)や数値(+○)として有効なものだけを抽出して結合
+  // 例: "2D10" -> ["2D10"] / "1D6+1+DB" -> ["1D6", "+1"] ※DBなどは除外
+  const matches = firstPart.match(/([+\-]?\d+D\d+|[+\-]?\d+)/g);
+  
+  if (!matches) return {t:1, e:'1'};
 
-    if (diceMatch) {
-      let numStr = diceMatch[1];
-      // 符号のみ、あるいは空文字の場合は 1 または -1 として扱う
-      if (numStr === "" || numStr === "+") numStr = "1";
-      if (numStr === "-") numStr = "-1";
-      
-      const num = parseInt(numStr);
-      const sides = parseInt(diceMatch[2]);
-      const sign = num < 0 ? -1 : 1;
-      const count = Math.abs(num);
-      
-      for (let i = 0; i < count; i++) total += sign * d(sides);
-    } else if (flatMatch) {
-      total += parseInt(flatMatch[0]);
+  let t = 0;
+  const expr = matches.join(''); // 計算に使用した式を再現
+
+  for (const p of matches) {
+    const md = p.match(/^([+\-]?)(\d+)D(\d+)$/);
+    const mc = p.match(/^([+\-]?\d+)$/);
+    
+    if (md) {
+      const sign = md[1] === '-' ? -1 : 1;
+      const num = parseInt(md[2]);
+      const face = parseInt(md[3]);
+      for (let i = 0; i < num; i++) t += sign * d(face);
+    } else if (mc) {
+      t += parseInt(mc[1]);
     }
-  });
-  return total;
+  }
+  
+  return {t, e: expr};
 }
 
 function calcDB(str,siz){
